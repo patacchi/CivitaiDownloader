@@ -282,4 +282,116 @@ public class FileDownloaderTests
 
         return null;
     }
+
+    /// <summary>
+    /// バイト数を適切な単位に変換するテスト（B単位）。
+    /// </summary>
+    [Fact]
+    public void FormatBytes_WithBytes_ReturnsBytes()
+    {
+        // Arrange
+        long bytes = 512;
+        
+        // Act
+        string result = FileDownloader.FormatBytes(bytes);
+        
+        // Assert
+        Assert.Equal("512 B", result);
+    }
+
+    /// <summary>
+    /// バイト数を適切な単位に変換するテスト（KB単位）。
+    /// </summary>
+    [Fact]
+    public void FormatBytes_WithKilobytes_ReturnsKB()
+    {
+        // Arrange
+        long bytes = 1536; // 1.5 KB
+        
+        // Act
+        string result = FileDownloader.FormatBytes(bytes);
+        
+        // Assert
+        Assert.Contains("KB", result);
+    }
+
+    /// <summary>
+    /// バイト数を適切な単位に変換するテスト（MB単位）。
+    /// </summary>
+    [Fact]
+    public void FormatBytes_WithMegabytes_ReturnsMB()
+    {
+        // Arrange
+        long bytes = 1572864; // 1.5 MB
+        
+        // Act
+        string result = FileDownloader.FormatBytes(bytes);
+        
+        // Assert
+        Assert.Contains("MB", result);
+    }
+
+    /// <summary>
+    /// バイト数を適切な単位に変換するテスト（GB単位）。
+    /// </summary>
+    [Fact]
+    public void FormatBytes_WithGigabytes_ReturnsGB()
+    {
+        // Arrange
+        long bytes = 1610612736; // 1.5 GB
+        
+        // Act
+        string result = FileDownloader.FormatBytes(bytes);
+        
+        // Assert
+        Assert.Contains("GB", result);
+    }
+
+    /// <summary>
+    /// 進捗バー生成のテスト（0%）。
+    /// </summary>
+    [Fact]
+    public void GenerateProgressBar_With0Percent_ReturnsEmptyBar()
+    {
+        // Arrange
+        double progress = 0.0;
+        
+        // Act
+        string result = FileDownloader.GenerateProgressBar(progress);
+        
+        // Assert
+        Assert.Equal("[--------------------]", result);
+    }
+
+    /// <summary>
+    /// 進捗バー生成のテスト（50%）。
+    /// </summary>
+    [Fact]
+    public void GenerateProgressBar_With50Percent_ReturnsHalfBar()
+    {
+        // Arrange
+        double progress = 0.5;
+        
+        // Act
+        string result = FileDownloader.GenerateProgressBar(progress);
+        
+        // Assert
+        Assert.Equal("[##########----------]", result);
+    }
+
+    /// <summary>
+    /// 進捗バー生成のテスト（100%）。
+    /// </summary>
+    [Fact]
+    public void GenerateProgressBar_With100Percent_ReturnsFullBar()
+    {
+        // Arrange
+        double progress = 1.0;
+        
+        // Act
+        string result = FileDownloader.GenerateProgressBar(progress);
+        
+        // Assert
+        Assert.Equal("[####################]", result);
+    }
 }

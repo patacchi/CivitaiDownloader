@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.IO;
 
 /// <summary>
 /// Civitai からファイルをダウンロードするためのクラス。
@@ -36,8 +37,9 @@ public class FileDownloader : IDisposable
     /// <param name="outputDirectory">ファイルを保存するディレクトリのパス。</param>
     /// <param name="customFilename">オプション。使用するファイル名を明示的に指定します。指定しない場合はサーバーから取得します。</param>
     /// <param name="overwrite">既存ファイルを上書きする場合は true。省略時は false。</param>
+    /// <param name="progress">進捗を報告する IProgress オブジェクト（省略時は非同期で進捗を報告しない）。</param>
     /// <returns>ダウンロードされたファイルの絶対パス。失敗した場合は null。</returns>
-    public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null, bool overwrite = false)
+    public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null, bool overwrite = false, IProgress<(double progress, long downloaded, long total)> progress = null)
     {
         try
         {
@@ -88,11 +90,27 @@ public class FileDownloader : IDisposable
                 }
             }
 
+            // Content-Length から総バイト数を取得
+            long totalBytes = response.Content.Headers.ContentLength ?? 0;
+
             // ファイルをダウンロード
             using (var stream = await response.Content.ReadAsStreamAsync())
             using (var fileStream = new System.IO.FileStream(outputPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
             {
-                await stream.CopyToAsync(fileStream);
+                // 進捗を報告するため、ストリームをバッファを使ってコピー
+                byte[] buffer = new byte[81920];
+                long totalRead = 0;
+                int bytesRead;
+
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer, 0, bytesRead);
+                    totalRead += bytesRead;
+
+                    // 進捗を報告
+                    double progressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 0;
+                    progress?.Report((progressPercent, totalRead, totalBytes));
+                }
             }
 
             return outputPath;
@@ -191,5 +209,47 @@ public class FileDownloader : IDisposable
     ~FileDownloader()
     {
         Dispose(false);
+    }
+
+    /// <summary>
+    /// バイト数を適切な単位に変換します。
+    /// </summary>
+    /// <param name="bytes">バイト数。</param>
+    /// <returns>変換されたバイト数（単位付き）。</returns>
+    internal static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+        else if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:0.###} KB";
+        }
+        else if (bytes < 1024 * 1024 * 1024)
+        {
+            return $"{bytes / (1024.0 * 1024.0):0.###} MB";
+        }
+        else
+        {
+            return $"{bytes / (1024.0 * 1024.0 * 1024.0):0.###} GB";
+        }
+    }
+
+    /// <summary>
+    /// 進捗バーを生成します。
+    /// </summary>
+    /// <param name="progress">進捗率（0.0 から 1.0 の範囲）。</param>
+    /// <param name="width">バーの長さ。</param>
+    /// <returns>生成された進捗バー文字列。</returns>
+    internal static string GenerateProgressBar(double progress, int width = 20)
+    {
+        if (progress < 0) progress = 0;
+        if (progress > 1) progress = 1;
+
+        int filled = (int)(progress * width);
+        int empty = width - filled;
+
+        return "[" + new string('#', filled) + new string('-', empty) + "]";
     }
 }

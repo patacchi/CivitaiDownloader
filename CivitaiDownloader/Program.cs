@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.IO;
 
 /// <summary>
 /// Civitai からモデルをダウンロードするための CLI アプリケーションのエントリーポイント。
@@ -44,14 +45,28 @@ class Program
             return;
         }
 
+        // 進捗表示用のハンドラ
+        var progress = new Progress<(double progress, long downloaded, long total)>(report =>
+        {
+            // 進捗バーとバイト数を表示
+            string progressBar = FileDownloader.GenerateProgressBar(report.progress);
+            string downloadedStr = FileDownloader.FormatBytes(report.downloaded);
+            string totalStr = FileDownloader.FormatBytes(report.total);
+            
+            // 1行上にカーソルを移動して上書き
+            Console.Write($"\rダウンロード中: {progressBar} ({downloadedStr} / {totalStr})");
+        });
+
         // ダウンロードの実行
         using var downloader = new FileDownloader();
         string downloadedFilePath = await downloader.DownloadFileAsync(
             commandLineArgs.Url,
             commandLineArgs.OutputDirectory,
             commandLineArgs.Filename,
-            commandLineArgs.AutoOverwrite);
+            commandLineArgs.AutoOverwrite,
+            progress);
 
+        Console.WriteLine(); // 進捗表示の行を改行
         if (!string.IsNullOrEmpty(downloadedFilePath))
         {
             Console.WriteLine($"ダウンロードが完了しました: {downloadedFilePath}");
