@@ -265,4 +265,19 @@ public class FileDownloader : IDisposable
 
         return "[" + new string('#', filled) + new string('-', empty) + "]";
     }
+
+    /// <summary>
+    /// URL に token を追加します（Token が指定されている場合のみ）。
+    /// </summary>
+    /// <param name="url">元の URL。</param>
+    /// <param name="token">アクセストークン。</param>
+    /// <returns>token が null の場合は元の URL、それ以外は token を追加した URL。</returns>
+    internal static string AddTokenToUrl(string url, string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return url;
+
+        string separator = url.Contains("?") ? "&" : "?";
+        return $"{url}{separator}token={token}";
+    }
 }

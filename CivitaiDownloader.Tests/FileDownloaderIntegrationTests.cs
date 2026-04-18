@@ -53,17 +53,21 @@ public class FileDownloaderIntegrationTests : IDisposable
     /// テストURLは TestConstants.CivitaiDownloadUrl で定義されています。
     /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
     /// </remarks>
-    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
     // [Fact]
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
     public async Task DownloadFileFromCivitaiAsync()
     {
         // Arrange - テスト用の URL（TestConstants から取得）
         string testUrl = TestConstants.CivitaiDownloadUrl;
         string expectedFilename = TestConstants.ExpectedFilename;
 
+        // Token を取得して URL に追加
+        var commandLineArgs = CommandLineArgs.Parse(Array.Empty<string>());
+        string downloadUrl = FileDownloader.AddTokenToUrl(testUrl, commandLineArgs.Token);
+
         // Act - FileDownloader を使用してファイルをダウンロード
         var downloader = new FileDownloader();
-        string downloadedFilePath = await downloader.DownloadFileAsync(testUrl, _tempDirectory);
+        string downloadedFilePath = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory);
 
         // Assert - ダウンロードされたファイルが存在することを確認
         Assert.NotNull(downloadedFilePath);
@@ -77,8 +81,8 @@ public class FileDownloaderIntegrationTests : IDisposable
     /// <remarks>
     /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
     /// </remarks>
-    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
-    // [Fact]
+    
+    [Fact]
     public async Task DownloadFileFromInvalidUrlAsync()
     {
         // Arrange
@@ -101,13 +105,17 @@ public class FileDownloaderIntegrationTests : IDisposable
     /// テストURLは TestConstants.CivitaiDownloadUrl で定義されています。
     /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
     /// </remarks>
-    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
     // [Fact]
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
     public async Task DownloadFileFromCivitai_WithProgress_ReportsAt1000msIntervals()
     {
         // Arrange
         string testUrl = TestConstants.CivitaiDownloadUrl;
         var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total, DateTime timestamp)>();
+
+        // Token を取得して URL に追加
+        var commandLineArgs = CommandLineArgs.Parse(Array.Empty<string>());
+        string downloadUrl = FileDownloader.AddTokenToUrl(testUrl, commandLineArgs.Token);
 
         // Act
         var downloader = new FileDownloader();
@@ -116,7 +124,7 @@ public class FileDownloaderIntegrationTests : IDisposable
             reportedProgress.Add((report.progress, report.downloaded, report.total, DateTime.Now));
         });
 
-        string downloadedFilePath = await downloader.DownloadFileAsync(testUrl, _tempDirectory, progress: progress);
+        string downloadedFilePath = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory, progress: progress);
 
         // Assert
         Assert.NotNull(downloadedFilePath);
@@ -125,10 +133,21 @@ public class FileDownloaderIntegrationTests : IDisposable
         // 進捗報告が行われたことを確認
         Assert.True(reportedProgress.Count > 0, "進捗が報告されませんでした");
 
-        // 進捗報告が1000ms間隔で行われたことを確認
-        if (reportedProgress.Count > 1)
+        // 進捗報告が100%で終了することを確認
+        var finalReport = reportedProgress[reportedProgress.Count - 1];
+        Assert.Equal(1.0, finalReport.progress, 2);
+
+        // 進捗報告が1回のみの場合、テスト終了
+        if (reportedProgress.Count == 1)
         {
-            for (int i = 1; i < reportedProgress.Count; i++)
+            return;
+        }
+
+        // 最終報告（100%）はダウンロード完了直後なので除外して検証
+        // 最初の報告から最終報告の1つ前までを検証
+        if (reportedProgress.Count > 2)
+        {
+            for (int i = 1; i < reportedProgress.Count - 1; i++)
             {
                 var timeDiff = (reportedProgress[i].timestamp - reportedProgress[i - 1].timestamp).TotalMilliseconds;
                 Assert.True(timeDiff >= 900, $"進捗報告間隔が1000ms未満です: {timeDiff}ms (index: {i})");
@@ -145,13 +164,17 @@ public class FileDownloaderIntegrationTests : IDisposable
     /// テストURLは TestConstants.CivitaiDownloadUrl で定義されています。
     /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
     /// </remarks>
-    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
     // [Fact]
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
     public async Task DownloadFileFromCivitai_WithProgress_FinishesAt100Percent()
     {
         // Arrange
         string testUrl = TestConstants.CivitaiDownloadUrl;
         var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total)>();
+
+        // Token を取得して URL に追加
+        var commandLineArgs = CommandLineArgs.Parse(Array.Empty<string>());
+        string downloadUrl = FileDownloader.AddTokenToUrl(testUrl, commandLineArgs.Token);
 
         // Act
         var downloader = new FileDownloader();
@@ -160,7 +183,7 @@ public class FileDownloaderIntegrationTests : IDisposable
             reportedProgress.Add(report);
         });
 
-        string downloadedFilePath = await downloader.DownloadFileAsync(testUrl, _tempDirectory, progress: progress);
+        string downloadedFilePath = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory, progress: progress);
 
         // Assert
         Assert.NotNull(downloadedFilePath);
