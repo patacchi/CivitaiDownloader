@@ -19,49 +19,58 @@ class FileDownloader
     /// <returns>ダウンロードされたファイルの絶対パス。失敗した場合は null。</returns>
     public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null)
     {
-        using var httpClient = new HttpClient();
-        
-        // リダイレクトを追跡して最終的なレスポンスを取得
-        var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-
-        response.EnsureSuccessStatusCode();
-
-        // Content-Disposition ヘッダからファイル名を抽出
-        string downloadedFilename = null;
-
-        if (response.Content.Headers.ContentDisposition != null)
+        try
         {
-            downloadedFilename = ExtractFilenameFromContentDisposition(response.Content.Headers.ContentDisposition.ToString());
+            using var httpClient = new HttpClient();
+            
+            // リダイレクトを追跡して最終的なレスポンスを取得
+            var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+
+            response.EnsureSuccessStatusCode();
+
+            // Content-Disposition ヘッダからファイル名を抽出
+            string downloadedFilename = null;
+
+            if (response.Content.Headers.ContentDisposition != null)
+            {
+                downloadedFilename = ExtractFilenameFromContentDisposition(response.Content.Headers.ContentDisposition.ToString());
+            }
+
+            // カスタムファイル名が指定されている場合はそれを使用
+            if (!string.IsNullOrEmpty(customFilename))
+            {
+                downloadedFilename = customFilename;
+            }
+            // サーバーから取得したファイル名がなければ、URLから推測
+            else if (string.IsNullOrEmpty(downloadedFilename))
+            {
+                downloadedFilename = ExtractFilenameFromUrl(url);
+            }
+
+            // ファイル名がまだ取得できない場合はエラー
+            if (string.IsNullOrEmpty(downloadedFilename))
+            {
+                return null;
+            }
+
+            // 出力ファイルパス
+            string outputPath = System.IO.Path.Combine(outputDirectory, downloadedFilename);
+
+            // ファイルをダウンロード
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var fileStream = new System.IO.FileStream(outputPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
+            {
+                await stream.CopyToAsync(fileStream);
+            }
+
+            return outputPath;
         }
-
-        // カスタムファイル名が指定されている場合はそれを使用
-        if (!string.IsNullOrEmpty(customFilename))
+        catch (Exception ex)
         {
-            downloadedFilename = customFilename;
-        }
-        // サーバーから取得したファイル名がなければ、URLから推測
-        else if (string.IsNullOrEmpty(downloadedFilename))
-        {
-            downloadedFilename = ExtractFilenameFromUrl(url);
-        }
-
-        // ファイル名がまだ取得できない場合はエラー
-        if (string.IsNullOrEmpty(downloadedFilename))
-        {
+            Console.Error.WriteLine($"エラー: ファイルのダウンロードに失敗しました。URL: {url}");
+            Console.Error.WriteLine($"詳細: {ex.Message}");
             return null;
         }
-
-        // 出力ファイルパス
-        string outputPath = System.IO.Path.Combine(outputDirectory, downloadedFilename);
-
-        // ファイルをダウンロード
-        using (var stream = await response.Content.ReadAsStreamAsync())
-        using (var fileStream = new System.IO.FileStream(outputPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
-        {
-            await stream.CopyToAsync(fileStream);
-        }
-
-        return outputPath;
     }
 
     /// <summary>
