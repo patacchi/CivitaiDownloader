@@ -31,6 +31,11 @@ public class CommandLineArgs
     public bool AutoOverwrite { get; }
 
     /// <summary>
+    /// アクセストークン。
+    /// </summary>
+    public string Token { get; }
+
+    /// <summary>
     /// コマンドライン引数を解析して CommandLineArgs インスタンスを初期化します。
     /// </summary>
     /// <param name="args">コマンドライン引数配列。</param>
@@ -40,6 +45,7 @@ public class CommandLineArgs
         string url = null;
         string outputDirectory = Environment.CurrentDirectory;
         string filename = null;
+        string token = null;
         bool showHelp = false;
         bool autoOverwrite = false;
         bool urlFromPositionalArg = false;
@@ -69,6 +75,12 @@ public class CommandLineArgs
                 case "-y":
                     autoOverwrite = true;
                     break;
+                case "-token":
+                    if (i + 1 < args.Length)
+                    {
+                        token = args[++i];
+                    }
+                    break;
                 case "-h":
                 case "--help":
                     showHelp = true;
@@ -91,7 +103,13 @@ public class CommandLineArgs
             }
         }
 
-        return new CommandLineArgs(url, outputDirectory, filename, showHelp, autoOverwrite);
+        // Token が指定されていない場合、環境変数 CIVITAI_API_KEY を使用
+        if (string.IsNullOrEmpty(token))
+        {
+            token = Environment.GetEnvironmentVariable("CIVITAI_API_KEY");
+        }
+
+        return new CommandLineArgs(url, outputDirectory, filename, token, showHelp, autoOverwrite);
     }
 
     /// <summary>
@@ -100,13 +118,15 @@ public class CommandLineArgs
     /// <param name="url">ダウンロードする URL。</param>
     /// <param name="outputDirectory">出力ディレクトリのパス。</param>
     /// <param name="filename">使用するファイル名。</param>
+    /// <param name="token">アクセストークン。</param>
     /// <param name="showHelp">ヘルプ表示が必要な場合は true。</param>
     /// <param name="autoOverwrite">既存ファイルを自動的に上書きする場合は true。</param>
-    private CommandLineArgs(string url, string outputDirectory, string filename, bool showHelp, bool autoOverwrite = false)
+    private CommandLineArgs(string url, string outputDirectory, string filename, string token, bool showHelp, bool autoOverwrite = false)
     {
         Url = url;
         OutputDirectory = outputDirectory;
         Filename = filename;
+        Token = token;
         ShowHelp = showHelp;
         AutoOverwrite = autoOverwrite;
     }

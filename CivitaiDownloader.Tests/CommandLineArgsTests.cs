@@ -269,4 +269,114 @@ public class CommandLineArgsTests
         Assert.False(result.ShowHelp);
         Assert.True(result.AutoOverwrite);
     }
+
+    /// <summary>
+    /// -token オプションと -output の組み合わせテスト。
+    /// </summary>
+    [Fact]
+    public void Parse_WithTokenAndOutput_ReturnsCorrectValues()
+    {
+        // Arrange
+        string[] args = { "-token", "test_token", "-output", "./downloads" };
+        
+        // Act
+        var result = CommandLineArgs.Parse(args);
+        
+        // Assert
+        Assert.Null(result.Url);
+        Assert.Equal("test_token", result.Token);
+        Assert.Equal("./downloads", result.OutputDirectory);
+        Assert.False(result.ShowHelp);
+    }
+
+    /// <summary>
+    /// -token オプションと -filename の組み合わせテスト。
+    /// </summary>
+    [Fact]
+    public void Parse_WithTokenAndFilename_ReturnsCorrectValues()
+    {
+        // Arrange
+        string[] args = { "-token", "test_token", "-filename", "custom.zip" };
+        
+        // Act
+        var result = CommandLineArgs.Parse(args);
+        
+        // Assert
+        Assert.Null(result.Url);
+        Assert.Equal("test_token", result.Token);
+        Assert.Equal("custom.zip", result.Filename);
+        Assert.False(result.ShowHelp);
+    }
+
+    /// <summary>
+    /// -token, -output, -filename のすべてを指定した場合のテスト。
+    /// </summary>
+    [Fact]
+    public void Parse_WithTokenOutputAndFilename_ReturnsCorrectValues()
+    {
+        // Arrange
+        string[] args = { 
+            "-token", "test_token",
+            "-output", "./downloads",
+            "-filename", "custom.zip" 
+        };
+        
+        // Act
+        var result = CommandLineArgs.Parse(args);
+        
+        // Assert
+        Assert.Null(result.Url);
+        Assert.Equal("test_token", result.Token);
+        Assert.Equal("./downloads", result.OutputDirectory);
+        Assert.Equal("custom.zip", result.Filename);
+        Assert.False(result.ShowHelp);
+    }
+
+    /// <summary>
+    /// 環境変数 CIVITAI_API_KEY が設定されている場合のテスト。
+    /// </summary>
+    [Fact]
+    public void Parse_WithCivitaiApiKeyEnvironmentVariable_ReturnsTokenFromEnv()
+    {
+        // Arrange
+        string[] args = { "-url", "https://example.com/file.zip" };
+        string originalEnv = Environment.GetEnvironmentVariable("CIVITAI_API_KEY");
+        
+        try
+        {
+            Environment.SetEnvironmentVariable("CIVITAI_API_KEY", "env_token_456");
+            var result = CommandLineArgs.Parse(args);
+            
+            // Assert
+            Assert.Equal("env_token_456", result.Token);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CIVITAI_API_KEY", originalEnv);
+        }
+    }
+
+    /// <summary>
+    /// -token オプションと環境変数の両方が指定された場合のテスト（-token が優先）。
+    /// </summary>
+    [Fact]
+    public void Parse_WithTokenAndCivitaiApiKey_ReturnsTokenFromArg()
+    {
+        // Arrange
+        string[] args = { "-url", "https://example.com/file.zip", "-token", "arg_token_789" };
+        string originalEnv = Environment.GetEnvironmentVariable("CIVITAI_API_KEY");
+        
+        try
+        {
+            Environment.SetEnvironmentVariable("CIVITAI_API_KEY", "env_token_456");
+            var result = CommandLineArgs.Parse(args);
+            
+            // Assert
+            Assert.Equal("arg_token_789", result.Token);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CIVITAI_API_KEY", originalEnv);
+        }
+    }
 }

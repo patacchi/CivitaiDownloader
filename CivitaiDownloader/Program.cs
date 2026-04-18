@@ -45,6 +45,8 @@ class Program
             return;
         }
 
+        string downloadUrl = AddTokenToUrl(commandLineArgs.Url, commandLineArgs.Token);
+
         // 進捗表示用のハンドラ
         var progress = new Progress<(double progress, long downloaded, long total)>(report =>
         {
@@ -60,7 +62,7 @@ class Program
         // ダウンロードの実行
         using var downloader = new FileDownloader();
         string downloadedFilePath = await downloader.DownloadFileAsync(
-            commandLineArgs.Url,
+            downloadUrl,
             commandLineArgs.OutputDirectory,
             commandLineArgs.Filename,
             commandLineArgs.AutoOverwrite,
@@ -75,6 +77,21 @@ class Program
         {
             Console.Error.WriteLine("ダウンロードに失敗しました。");
         }
+    }
+
+    /// <summary>
+    /// URL に token を追加します（Token が指定されている場合のみ）。
+    /// </summary>
+    /// <param name="url">元の URL。</param>
+    /// <param name="token">アクセストークン。</param>
+    /// <returns>token が null の場合は元の URL、それ以外は token を追加した URL。</returns>
+    internal static string AddTokenToUrl(string url, string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return url;
+        
+        string separator = url.Contains("?") ? "&" : "?";
+        return $"{url}{separator}token={token}";
     }
 
     /// <summary>
@@ -93,6 +110,7 @@ class Program
         Console.WriteLine("  -url <URL>              ダウンロードするURL（オプション）");
         Console.WriteLine("  -output <ディレクトリ>  出力ディレクトリ（オプション、デフォルト: カレントディレクトリ）");
         Console.WriteLine("  -filename <ファイル名>  ファイル名（オプション、指定なしはサーバーから取得）");
+        Console.WriteLine("  -token <トークン>       アクセストークン（オプション、または環境変数 CIVITAI_API_KEY）");
         Console.WriteLine("  -y                      既存ファイルを自動的に上書き（確認なし）");
         Console.WriteLine("  -h, --help              使用方法を表示");
         Console.WriteLine();
