@@ -3,7 +3,7 @@ using System;
 /// <summary>
 /// コマンドライン引数を解析して保持するクラス。
 /// </summary>
-class CommandLineArgs
+public class CommandLineArgs
 {
     /// <summary>
     /// ダウンロードする URL。
