@@ -12,21 +12,34 @@ using System.IO;
 public class FileDownloader : IDisposable
 {
     private readonly HttpClient _httpClient;
+    private readonly IFileSystem _fileSystem;
     private bool _disposed = false;
 
     /// <summary>
-    /// HttpClient を使用して FileDownloader の新しいインスタンスを初期化します。
+    /// HttpClient と IFileSystem を使用して FileDownloader の新しいインスタンスを初期化します。
     /// </summary>
     /// <param name="httpClient">HTTP リクエストに使用する HttpClient。</param>
-    public FileDownloader(HttpClient httpClient)
+    /// <param name="fileSystem">ファイルシステム操作に使用する IFileSystem。</param>
+    public FileDownloader(HttpClient httpClient, IFileSystem fileSystem)
     {
         _httpClient = httpClient;
+        _fileSystem = fileSystem;
+    }
+
+    /// <summary>
+    /// HttpClient を使用して FileDownloader の新しいインスタンスを初期化します。
+    /// デフォルトの IFileSystem（DefaultFileSystem）を使用します。
+    /// </summary>
+    /// <param name="httpClient">HTTP リクエストに使用する HttpClient。</param>
+    public FileDownloader(HttpClient httpClient) : this(httpClient, new DefaultFileSystem())
+    {
     }
 
     /// <summary>
     /// デフォルトの HttpClient を使用して FileDownloader の新しいインスタンスを初期化します。
+    /// デフォルトの IFileSystem（DefaultFileSystem）を使用します。
     /// </summary>
-    public FileDownloader() : this(new HttpClient())
+    public FileDownloader() : this(new HttpClient(), new DefaultFileSystem())
     {
     }
 
@@ -77,13 +90,23 @@ public class FileDownloader : IDisposable
             string outputPath = System.IO.Path.Combine(outputDirectory, downloadedFilename);
 
             // ファイルが既に存在する場合、ユーザーに確認
-            if (System.IO.File.Exists(outputPath) && !overwrite)
+            if (_fileSystem.FileExists(outputPath) && !overwrite)
             {
-                Console.Write($"ファイル '{downloadedFilename}' は既に存在します。上書きしますか？(y/n): ");
-                var keyInfo = Console.ReadKey(false);
-                Console.WriteLine(); // 改行
+                ConsoleKey keyInfo;
+                do
+                {
+                    Console.Write($"ファイル '{downloadedFilename}' は既に存在します。上書きしますか？(y/n): ");
+                    keyInfo = _fileSystem.ReadKey(false);
+                    Console.WriteLine(); // 改行
+                    
+                    if (keyInfo != ConsoleKey.Y && keyInfo != ConsoleKey.N)
+                    {
+                        Console.WriteLine("y または n を入力してください。");
+                    }
+                }
+                while (keyInfo != ConsoleKey.Y && keyInfo != ConsoleKey.N);
                 
-                if (keyInfo.Key != ConsoleKey.Y)
+                if (keyInfo != ConsoleKey.Y)
                 {
                     Console.WriteLine("ダウンロードをキャンセルしました。");
                     return null;

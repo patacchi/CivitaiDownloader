@@ -160,8 +160,12 @@ public class FileDownloaderTests
                     }
                 });
 
+            var mockFileSystem = new Mock<IFileSystem>();
+            mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(true);
+            mockFileSystem.Setup(fs => fs.ReadKey(false)).Returns(ConsoleKey.N);
+
             var httpClient = new HttpClient(mockHttpMessageHandler.Object);
-            var downloader = new FileDownloader(httpClient);
+            var downloader = new FileDownloader(httpClient, mockFileSystem.Object);
 
             // Act
             string result = await downloader.DownloadFileAsync(testUrl, testOutputDirectory, overwrite: false);
@@ -208,11 +212,68 @@ public class FileDownloaderTests
                     }
                 });
 
+            var mockFileSystem = new Mock<IFileSystem>();
+            mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(true);
+
             var httpClient = new HttpClient(mockHttpMessageHandler.Object);
-            var downloader = new FileDownloader(httpClient);
+            var downloader = new FileDownloader(httpClient, mockFileSystem.Object);
 
             // Act
             string result = await downloader.DownloadFileAsync(testUrl, testOutputDirectory, overwrite: true);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(existingFilePath, result);
+            Assert.Equal("new content", File.ReadAllText(result));
+        }
+        finally
+        {
+            // 既存ファイルを削除
+            if (File.Exists(existingFilePath))
+            {
+                File.Delete(existingFilePath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 同名ファイルが存在し、overwrite=false でユーザーが 'y' を入力した場合、ダウンロードが実行されることをテストします。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFileAsync_WithExistingFileAndUserConfirms_DownloadsFile()
+    {
+        // Arrange
+        string testUrl = "https://example.com/file.zip";
+        string testOutputDirectory = Path.GetTempPath();
+        string existingFilename = $"test_file_{Guid.NewGuid()}.zip";
+        string existingFilePath = Path.Combine(testOutputDirectory, existingFilename);
+
+        // 既存ファイルを作成
+        File.WriteAllText(existingFilePath, "existing content");
+
+        try
+        {
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = System.Net.HttpStatusCode.OK,
+                    Content = new StringContent("new content")
+                    {
+                        Headers = { ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment") { FileName = existingFilename } }
+                    }
+                });
+
+            var mockFileSystem = new Mock<IFileSystem>();
+            mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(true);
+            mockFileSystem.Setup(fs => fs.ReadKey(false)).Returns(ConsoleKey.Y);
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var downloader = new FileDownloader(httpClient, mockFileSystem.Object);
+
+            // Act
+            string result = await downloader.DownloadFileAsync(testUrl, testOutputDirectory, overwrite: false);
 
             // Assert
             Assert.NotNull(result);
