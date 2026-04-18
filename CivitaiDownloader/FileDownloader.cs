@@ -1,0 +1,120 @@
+using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+/// <summary>
+/// Civitai からファイルをダウンロードするためのクラス。
+/// Content-Disposition ヘッダから正しいファイル名を抽出します。
+/// </summary>
+class FileDownloader
+{
+    /// <summary>
+    /// 指定された URL からファイルをダウンロードし、Content-Disposition ヘッダから抽出したファイル名で保存します。
+    /// </summary>
+    /// <param name="url">ダウンロードするファイルの URL。</param>
+    /// <param name="outputDirectory">ファイルを保存するディレクトリのパス。</param>
+    /// <param name="customFilename">オプション。使用するファイル名を明示的に指定します。指定しない場合はサーバーから取得します。</param>
+    /// <returns>ダウンロードされたファイルの絶対パス。失敗した場合は null。</returns>
+    public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null)
+    {
+        using var httpClient = new HttpClient();
+        
+        // リダイレクトを追跡して最終的なレスポンスを取得
+        var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+
+        response.EnsureSuccessStatusCode();
+
+        // Content-Disposition ヘッダからファイル名を抽出
+        string downloadedFilename = null;
+
+        if (response.Content.Headers.ContentDisposition != null)
+        {
+            downloadedFilename = ExtractFilenameFromContentDisposition(response.Content.Headers.ContentDisposition.ToString());
+        }
+
+        // カスタムファイル名が指定されている場合はそれを使用
+        if (!string.IsNullOrEmpty(customFilename))
+        {
+            downloadedFilename = customFilename;
+        }
+        // サーバーから取得したファイル名がなければ、URLから推測
+        else if (string.IsNullOrEmpty(downloadedFilename))
+        {
+            downloadedFilename = ExtractFilenameFromUrl(url);
+        }
+
+        // ファイル名がまだ取得できない場合はエラー
+        if (string.IsNullOrEmpty(downloadedFilename))
+        {
+            return null;
+        }
+
+        // 出力ファイルパス
+        string outputPath = System.IO.Path.Combine(outputDirectory, downloadedFilename);
+
+        // ファイルをダウンロード
+        using (var stream = await response.Content.ReadAsStreamAsync())
+        using (var fileStream = new System.IO.FileStream(outputPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
+        {
+            await stream.CopyToAsync(fileStream);
+        }
+
+        return outputPath;
+    }
+
+    /// <summary>
+    /// Content-Disposition ヘッダの値からファイル名を抽出します。
+    /// </summary>
+    /// <param name="contentDisposition">Content-Disposition ヘッダの値。例: "attachment; filename=\"filename.zip\""</param>
+    /// <returns>抽出されたファイル名。ファイル名が見つからない場合は null。</returns>
+    static string ExtractFilenameFromContentDisposition(string contentDisposition)
+    {
+        if (string.IsNullOrEmpty(contentDisposition))
+        {
+            return null;
+        }
+
+        // filename="value" の形式（旧形式）からファイル名を抽出
+        var match = Regex.Match(contentDisposition, @"filename=""([^""]+)""");
+        if (match.Success && match.Groups.Count > 1)
+        {
+            return match.Groups[1].Value.Trim();
+        }
+
+        // filename=value の形式（クォートなし）からファイル名を抽出
+        match = Regex.Match(contentDisposition, @"filename=([^\s;]+)");
+        if (match.Success && match.Groups.Count > 1)
+        {
+            return match.Groups[1].Value.Trim().Trim('"');
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// URL からファイル名を抽出します。
+    /// </summary>
+    /// <param name="url">ファイルを含む URL。</param>
+    /// <returns>抽出されたファイル名。抽出できない場合は null。</returns>
+    static string ExtractFilenameFromUrl(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var path = uri.AbsolutePath;
+            var fileName = System.IO.Path.GetFileName(path);
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                return fileName;
+            }
+        }
+        catch
+        {
+            // URL解析に失敗した場合は null を返す
+        }
+
+        return null;
+    }
+}

@@ -1,49 +1,29 @@
 using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Civitai からモデルをダウンロードするための CLI アプリケーションのエントリーポイント。
+/// </summary>
 class Program
 {
+    /// <summary>
+    /// アプリケーションのエントリーポイント。
+    /// コマンドライン引数を解析し、指定された URL からファイルをダウンロードします。
+    /// </summary>
+    /// <param name="args">コマンドライン引数（-url, -output, -filename）</param>
     static async Task Main(string[] args)
     {
-        string url = null;
-        string outputDirectory = Environment.CurrentDirectory;
-        string filename = null;
-
         // コマンドライン引数の解析
-        for (int i = 0; i < args.Length; i++)
+        var commandLineArgs = CommandLineArgs.Parse(args);
+
+        // ヘルプ表示の場合は終了
+        if (commandLineArgs.ShowHelp)
         {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "-url":
-                    if (i + 1 < args.Length)
-                    {
-                        url = args[++i];
-                    }
-                    break;
-                case "-output":
-                    if (i + 1 < args.Length)
-                    {
-                        outputDirectory = args[++i];
-                    }
-                    break;
-                case "-filename":
-                    if (i + 1 < args.Length)
-                    {
-                        filename = args[++i];
-                    }
-                    break;
-                case "-h":
-                case "--help":
-                    PrintUsage();
-                    return;
-            }
+            return;
         }
 
         // URLの検証
-        if (string.IsNullOrWhiteSpace(url))
+        if (string.IsNullOrWhiteSpace(commandLineArgs.Url))
         {
             Console.Error.WriteLine("エラー: -url 引数が指定されていません。");
             PrintUsage();
@@ -53,19 +33,23 @@ class Program
         // 出力ディレクトリの確認と作成
         try
         {
-            if (!System.IO.Directory.Exists(outputDirectory))
+            if (!System.IO.Directory.Exists(commandLineArgs.OutputDirectory))
             {
-                System.IO.Directory.CreateDirectory(outputDirectory);
+                System.IO.Directory.CreateDirectory(commandLineArgs.OutputDirectory);
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"エラー: 出力ディレクトリ '{outputDirectory}' の作成に失敗しました: {ex.Message}");
+            Console.Error.WriteLine($"エラー: 出力ディレクトリ '{commandLineArgs.OutputDirectory}' の作成に失敗しました: {ex.Message}");
             return;
         }
 
         // ダウンロードの実行
-        string downloadedFilePath = await DownloadFileWithFilename(url, outputDirectory, filename);
+        FileDownloader downloader = new FileDownloader();
+        string downloadedFilePath = await downloader.DownloadFileAsync(
+            commandLineArgs.Url,
+            commandLineArgs.OutputDirectory,
+            commandLineArgs.Filename);
 
         if (!string.IsNullOrEmpty(downloadedFilePath))
         {
@@ -77,6 +61,9 @@ class Program
         }
     }
 
+    /// <summary>
+    /// 使用方法をコンソールに出力します。
+    /// </summary>
     static void PrintUsage()
     {
         Console.WriteLine("Civitai Downloader - Civitai からモデルをダウンロードするツール");
@@ -94,97 +81,5 @@ class Program
         Console.WriteLine("  CivitaiDownloader.exe -url \"https://civitai.com/api/download/models/123\"");
         Console.WriteLine("  CivitaiDownloader.exe -url \"https://civitai.com/api/download/models/123\" -output \"./downloads\"");
         Console.WriteLine("  CivitaiDownloader.exe -url \"https://civitai.com/api/download/models/123\" -filename \"custom.zip\"");
-    }
-
-    static async Task<string> DownloadFileWithFilename(string url, string outputDirectory, string customFilename = null)
-    {
-        using var httpClient = new HttpClient();
-        
-        // リダイレクトを追跡して最終的なレスポンスを取得
-        var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-
-        response.EnsureSuccessStatusCode();
-
-        // Content-Disposition ヘッダからファイル名を抽出
-        string downloadedFilename = null;
-
-        if (response.Content.Headers.ContentDisposition != null)
-        {
-            downloadedFilename = ExtractFilenameFromContentDisposition(response.Content.Headers.ContentDisposition.ToString());
-        }
-
-        // カスタムファイル名が指定されている場合はそれを使用
-        if (!string.IsNullOrEmpty(customFilename))
-        {
-            downloadedFilename = customFilename;
-        }
-        // サーバーから取得したファイル名がなければ、URLから推測
-        else if (string.IsNullOrEmpty(downloadedFilename))
-        {
-            downloadedFilename = ExtractFilenameFromUrl(url);
-        }
-
-        // ファイル名がまだ取得できない場合はエラー
-        if (string.IsNullOrEmpty(downloadedFilename))
-        {
-            Console.Error.WriteLine("エラー: ファイル名を特定できませんでした。-filename オプションで指定してください。");
-            return null;
-        }
-
-        // 出力ファイルパス
-        string outputPath = System.IO.Path.Combine(outputDirectory, downloadedFilename);
-
-        // ファイルをダウンロード
-        using (var stream = await response.Content.ReadAsStreamAsync())
-        using (var fileStream = new System.IO.FileStream(outputPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
-        {
-            await stream.CopyToAsync(fileStream);
-        }
-
-        return outputPath;
-    }
-
-    static string ExtractFilenameFromContentDisposition(string contentDisposition)
-    {
-        if (string.IsNullOrEmpty(contentDisposition))
-        {
-            return null;
-        }
-
-        // filename="value" の形式（旧形式）からファイル名を抽出
-        var match = Regex.Match(contentDisposition, @"filename=""([^""]+)""");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim();
-        }
-
-        // filename=value の形式（クォートなし）からファイル名を抽出
-        match = Regex.Match(contentDisposition, @"filename=([^\s;]+)");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim().Trim('"');
-        }
-
-        return null;
-    }
-
-    static string ExtractFilenameFromUrl(string url)
-    {
-        try
-        {
-            var uri = new Uri(url);
-            var path = uri.AbsolutePath;
-            var fileName = System.IO.Path.GetFileName(path);
-            if (!string.IsNullOrEmpty(fileName))
-            {
-                return fileName;
-            }
-        }
-        catch
-        {
-            // URL解析に失敗した場合は null を返す
-        }
-
-        return null;
     }
 }
