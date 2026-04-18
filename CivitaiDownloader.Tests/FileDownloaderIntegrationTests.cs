@@ -91,4 +91,83 @@ public class FileDownloaderIntegrationTests : IDisposable
         // Assert - 無効な URL の場合は null を返す
         Assert.Null(result);
     }
+
+    /// <summary>
+    /// Civitai から実際にファイルをダウンロードし、進捗報告が1000ms間隔で行われることをテストします。
+    /// </summary>
+    /// <remarks>
+    /// このテストは実際のネットワークアクセスを行います。
+    /// テスト実行にはインターネット接続が必要です。
+    /// テストURLは TestConstants.CivitaiDownloadUrl で定義されています。
+    /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
+    /// </remarks>
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
+    // [Fact]
+    public async Task DownloadFileFromCivitai_WithProgress_ReportsAt1000msIntervals()
+    {
+        // Arrange
+        string testUrl = TestConstants.CivitaiDownloadUrl;
+        var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total, DateTime timestamp)>();
+
+        // Act
+        var downloader = new FileDownloader();
+        var progress = new Progress<(double progress, long downloaded, long total)>(report =>
+        {
+            reportedProgress.Add((report.progress, report.downloaded, report.total, DateTime.Now));
+        });
+
+        string downloadedFilePath = await downloader.DownloadFileAsync(testUrl, _tempDirectory, progress: progress);
+
+        // Assert
+        Assert.NotNull(downloadedFilePath);
+        Assert.True(File.Exists(downloadedFilePath));
+
+        // 進捗報告が行われたことを確認
+        Assert.True(reportedProgress.Count > 0, "進捗が報告されませんでした");
+
+        // 進捗報告が1000ms間隔で行われたことを確認
+        if (reportedProgress.Count > 1)
+        {
+            for (int i = 1; i < reportedProgress.Count; i++)
+            {
+                var timeDiff = (reportedProgress[i].timestamp - reportedProgress[i - 1].timestamp).TotalMilliseconds;
+                Assert.True(timeDiff >= 900, $"進捗報告間隔が1000ms未満です: {timeDiff}ms (index: {i})");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Civitai から実際にファイルをダウンロードし、進捗報告が100%で終了することをテストします。
+    /// </summary>
+    /// <remarks>
+    /// このテストは実際のネットワークアクセスを行います。
+    /// テスト実行にはインターネット接続が必要です。
+    /// テストURLは TestConstants.CivitaiDownloadUrl で定義されています。
+    /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
+    /// </remarks>
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
+    // [Fact]
+    public async Task DownloadFileFromCivitai_WithProgress_FinishesAt100Percent()
+    {
+        // Arrange
+        string testUrl = TestConstants.CivitaiDownloadUrl;
+        var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total)>();
+
+        // Act
+        var downloader = new FileDownloader();
+        var progress = new Progress<(double progress, long downloaded, long total)>(report =>
+        {
+            reportedProgress.Add(report);
+        });
+
+        string downloadedFilePath = await downloader.DownloadFileAsync(testUrl, _tempDirectory, progress: progress);
+
+        // Assert
+        Assert.NotNull(downloadedFilePath);
+        Assert.True(File.Exists(downloadedFilePath));
+
+        // 最終報告が100%であることを確認
+        var finalReport = reportedProgress[reportedProgress.Count - 1];
+        Assert.Equal(1.0, finalReport.progress, 2);
+    }
 }

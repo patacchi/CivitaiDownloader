@@ -140,7 +140,7 @@ public class FileDownloaderTests
         // Arrange
         string testUrl = "https://example.com/file.zip";
         string testOutputDirectory = Path.GetTempPath();
-        string existingFilename = "test_file.zip";
+        string existingFilename = $"test_file_{Guid.NewGuid()}.zip";
         string existingFilePath = Path.Combine(testOutputDirectory, existingFilename);
 
         // 既存ファイルを作成
@@ -188,7 +188,7 @@ public class FileDownloaderTests
         // Arrange
         string testUrl = "https://example.com/file.zip";
         string testOutputDirectory = Path.GetTempPath();
-        string existingFilename = "test_file.zip";
+        string existingFilename = $"test_file_{Guid.NewGuid()}.zip";
         string existingFilePath = Path.Combine(testOutputDirectory, existingFilename);
 
         // 既存ファイルを作成
@@ -394,4 +394,5 @@ public class FileDownloaderTests
         // Assert
         Assert.Equal("[####################]", result);
     }
+
 }

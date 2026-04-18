@@ -102,15 +102,28 @@ public class FileDownloader : IDisposable
                 long totalRead = 0;
                 int bytesRead;
 
+                // 進捗報告の間隔（ミリ秒）
+                const int ProgressUpdateIntervalMs = 1000;
+                DateTime lastProgressReport = DateTime.MinValue;
+
                 while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     await fileStream.WriteAsync(buffer, 0, bytesRead);
                     totalRead += bytesRead;
 
-                    // 進捗を報告
-                    double progressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 0;
-                    progress?.Report((progressPercent, totalRead, totalBytes));
+                    // 進捗を報告（1000ms 経過時のみ）
+                    DateTime now = DateTime.Now;
+                    if ((now - lastProgressReport).TotalMilliseconds >= ProgressUpdateIntervalMs)
+                    {
+                        double progressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 0;
+                        progress?.Report((progressPercent, totalRead, totalBytes));
+                        lastProgressReport = now;
+                    }
                 }
+
+                // ダウンロード完了時に必ず100%の進捗を報告
+                double finalProgressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 1.0;
+                progress?.Report((finalProgressPercent, totalRead, totalBytes));
             }
 
             return outputPath;
