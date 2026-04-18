@@ -53,8 +53,8 @@ public class FileDownloaderIntegrationTests : IDisposable
     /// テストURLは TestConstants.CivitaiDownloadUrl で定義されています。
     /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
     /// </remarks>
-    // [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
-    [Fact]
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
+    // [Fact]
     public async Task DownloadFileFromCivitaiAsync()
     {
         // Arrange - テスト用の URL（TestConstants から取得）
@@ -77,8 +77,8 @@ public class FileDownloaderIntegrationTests : IDisposable
     /// <remarks>
     /// テスト実行する場合は、[Fact] 行のコメントアウトを解除、[Fact(Skip)...]行をコメントした上で使用して下さい。
     /// </remarks>
-    // [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
-    [Fact]
+    [Fact(Skip = "ネットワークアクセスが必要なため、手動実行のみ。TestConstants.cs を修正してテストを有効にしてください。")]
+    // [Fact]
     public async Task DownloadFileFromInvalidUrlAsync()
     {
         // Arrange
