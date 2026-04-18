@@ -230,4 +230,43 @@ public class CommandLineArgsTests
         Assert.Null(result.Filename);
         Assert.False(result.ShowHelp);
     }
+
+    /// <summary>
+    /// 位置パラメータで URL を指定した場合のテスト。
+    /// </summary>
+    [Fact]
+    public void Parse_WithUrlAsPositionalArg_ReturnsCorrectUrl()
+    {
+        // Arrange
+        string[] args = { "https://example.com/file.zip" };
+        
+        // Act
+        var result = CommandLineArgs.Parse(args);
+        
+        // Assert
+        Assert.Equal("https://example.com/file.zip", result.Url);
+        Assert.Equal(Environment.CurrentDirectory, result.OutputDirectory);
+        Assert.Null(result.Filename);
+        Assert.False(result.ShowHelp);
+    }
+
+    /// <summary>
+    /// -y オプション指定時のテスト。
+    /// </summary>
+    [Fact]
+    public void Parse_WithYFlag_ReturnsAutoOverwriteTrue()
+    {
+        // Arrange
+        string[] args = { "-y" };
+        
+        // Act
+        var result = CommandLineArgs.Parse(args);
+        
+        // Assert
+        Assert.Null(result.Url);
+        Assert.Equal(Environment.CurrentDirectory, result.OutputDirectory);
+        Assert.Null(result.Filename);
+        Assert.False(result.ShowHelp);
+        Assert.True(result.AutoOverwrite);
+    }
 }

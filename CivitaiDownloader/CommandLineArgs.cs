@@ -26,6 +26,11 @@ public class CommandLineArgs
     public bool ShowHelp { get; }
 
     /// <summary>
+    /// 既存ファイルを自動的に上書きする場合は true。
+    /// </summary>
+    public bool AutoOverwrite { get; }
+
+    /// <summary>
     /// コマンドライン引数を解析して CommandLineArgs インスタンスを初期化します。
     /// </summary>
     /// <param name="args">コマンドライン引数配列。</param>
@@ -36,6 +41,8 @@ public class CommandLineArgs
         string outputDirectory = Environment.CurrentDirectory;
         string filename = null;
         bool showHelp = false;
+        bool autoOverwrite = false;
+        bool urlFromPositionalArg = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -59,6 +66,9 @@ public class CommandLineArgs
                         filename = args[++i];
                     }
                     break;
+                case "-y":
+                    autoOverwrite = true;
+                    break;
                 case "-h":
                 case "--help":
                     showHelp = true;
@@ -66,7 +76,22 @@ public class CommandLineArgs
             }
         }
 
-        return new CommandLineArgs(url, outputDirectory, filename, showHelp);
+        // -url オプションが指定されていない場合、最初の位置パラメータを URL として使用
+        if (string.IsNullOrEmpty(url))
+        {
+            // URL 形式の位置パラメータを検索（http:// または https:// で始まる）
+            for (int i = 0; i < args.Length; i++)
+            {
+                string arg = args[i];
+                if (!string.IsNullOrEmpty(arg) && (arg.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || arg.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+                {
+                    url = arg;
+                    break;
+                }
+            }
+        }
+
+        return new CommandLineArgs(url, outputDirectory, filename, showHelp, autoOverwrite);
     }
 
     /// <summary>
@@ -76,11 +101,13 @@ public class CommandLineArgs
     /// <param name="outputDirectory">出力ディレクトリのパス。</param>
     /// <param name="filename">使用するファイル名。</param>
     /// <param name="showHelp">ヘルプ表示が必要な場合は true。</param>
-    private CommandLineArgs(string url, string outputDirectory, string filename, bool showHelp)
+    /// <param name="autoOverwrite">既存ファイルを自動的に上書きする場合は true。</param>
+    private CommandLineArgs(string url, string outputDirectory, string filename, bool showHelp, bool autoOverwrite = false)
     {
         Url = url;
         OutputDirectory = outputDirectory;
         Filename = filename;
         ShowHelp = showHelp;
+        AutoOverwrite = autoOverwrite;
     }
 }

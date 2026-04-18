@@ -1,6 +1,9 @@
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Moq;
+using Moq.Protected;
 using Xunit;
 
 /// <summary>
@@ -126,6 +129,104 @@ public class FileDownloaderTests
         
         // Assert
         Assert.Null(result);
+    }
+
+    /// <summary>
+    /// 同名ファイルが存在し、overwrite=false の場合、ユーザー確認プロンプトを表示してキャンセルすることをテストします。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFileAsync_WithExistingFileAndNoOverwrite_CancelsDownload()
+    {
+        // Arrange
+        string testUrl = "https://example.com/file.zip";
+        string testOutputDirectory = Path.GetTempPath();
+        string existingFilename = "test_file.zip";
+        string existingFilePath = Path.Combine(testOutputDirectory, existingFilename);
+
+        // 既存ファイルを作成
+        File.WriteAllText(existingFilePath, "existing content");
+
+        try
+        {
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = System.Net.HttpStatusCode.OK,
+                    Content = new StringContent("downloaded content")
+                    {
+                        Headers = { ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment") { FileName = existingFilename } }
+                    }
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var downloader = new FileDownloader(httpClient);
+
+            // Act
+            string result = await downloader.DownloadFileAsync(testUrl, testOutputDirectory, overwrite: false);
+
+            // Assert
+            Assert.Null(result);
+        }
+        finally
+        {
+            // 既存ファイルを削除
+            if (File.Exists(existingFilePath))
+            {
+                File.Delete(existingFilePath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 同名ファイルが存在し、overwrite=true の場合、自動的に上書きすることをテストします。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFileAsync_WithExistingFileAndOverwrite_True_OverwritesFile()
+    {
+        // Arrange
+        string testUrl = "https://example.com/file.zip";
+        string testOutputDirectory = Path.GetTempPath();
+        string existingFilename = "test_file.zip";
+        string existingFilePath = Path.Combine(testOutputDirectory, existingFilename);
+
+        // 既存ファイルを作成
+        File.WriteAllText(existingFilePath, "existing content");
+
+        try
+        {
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = System.Net.HttpStatusCode.OK,
+                    Content = new StringContent("new content")
+                    {
+                        Headers = { ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment") { FileName = existingFilename } }
+                    }
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var downloader = new FileDownloader(httpClient);
+
+            // Act
+            string result = await downloader.DownloadFileAsync(testUrl, testOutputDirectory, overwrite: true);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(existingFilePath, result);
+            Assert.Equal("new content", File.ReadAllText(result));
+        }
+        finally
+        {
+            // 既存ファイルを削除
+            if (File.Exists(existingFilePath))
+            {
+                File.Delete(existingFilePath);
+            }
+        }
     }
 
     /// <summary>

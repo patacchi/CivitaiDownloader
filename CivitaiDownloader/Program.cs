@@ -45,11 +45,12 @@ class Program
         }
 
         // ダウンロードの実行
-        FileDownloader downloader = new FileDownloader();
+        using var downloader = new FileDownloader();
         string downloadedFilePath = await downloader.DownloadFileAsync(
             commandLineArgs.Url,
             commandLineArgs.OutputDirectory,
-            commandLineArgs.Filename);
+            commandLineArgs.Filename,
+            commandLineArgs.AutoOverwrite);
 
         if (!string.IsNullOrEmpty(downloadedFilePath))
         {
@@ -69,16 +70,21 @@ class Program
         Console.WriteLine("Civitai Downloader - Civitai からモデルをダウンロードするツール");
         Console.WriteLine();
         Console.WriteLine("使用方法:");
+        Console.WriteLine("  CivitaiDownloader.exe <URL> [オプション]");
         Console.WriteLine("  CivitaiDownloader.exe -url <URL> [オプション]");
         Console.WriteLine();
         Console.WriteLine("引数:");
-        Console.WriteLine("  -url <URL>              ダウンロードするURL（必須）");
+        Console.WriteLine("  <URL>                   ダウンロードするURL（位置パラメータ、または -url オプション）");
+        Console.WriteLine("  -url <URL>              ダウンロードするURL（オプション）");
         Console.WriteLine("  -output <ディレクトリ>  出力ディレクトリ（オプション、デフォルト: カレントディレクトリ）");
         Console.WriteLine("  -filename <ファイル名>  ファイル名（オプション、指定なしはサーバーから取得）");
+        Console.WriteLine("  -y                      既存ファイルを自動的に上書き（確認なし）");
         Console.WriteLine("  -h, --help              使用方法を表示");
         Console.WriteLine();
         Console.WriteLine("例:");
+        Console.WriteLine("  CivitaiDownloader.exe \"https://civitai.com/api/download/models/123\"");
         Console.WriteLine("  CivitaiDownloader.exe -url \"https://civitai.com/api/download/models/123\"");
+        Console.WriteLine("  CivitaiDownloader.exe \"https://civitai.com/api/download/models/123\" -output \"./downloads\"");
         Console.WriteLine("  CivitaiDownloader.exe -url \"https://civitai.com/api/download/models/123\" -output \"./downloads\"");
         Console.WriteLine("  CivitaiDownloader.exe -url \"https://civitai.com/api/download/models/123\" -filename \"custom.zip\"");
     }

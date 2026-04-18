@@ -8,23 +8,41 @@ using System.Threading.Tasks;
 /// Civitai からファイルをダウンロードするためのクラス。
 /// Content-Disposition ヘッダから正しいファイル名を抽出します。
 /// </summary>
-class FileDownloader
+public class FileDownloader : IDisposable
 {
+    private readonly HttpClient _httpClient;
+    private bool _disposed = false;
+
+    /// <summary>
+    /// HttpClient を使用して FileDownloader の新しいインスタンスを初期化します。
+    /// </summary>
+    /// <param name="httpClient">HTTP リクエストに使用する HttpClient。</param>
+    public FileDownloader(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    /// <summary>
+    /// デフォルトの HttpClient を使用して FileDownloader の新しいインスタンスを初期化します。
+    /// </summary>
+    public FileDownloader() : this(new HttpClient())
+    {
+    }
+
     /// <summary>
     /// 指定された URL からファイルをダウンロードし、Content-Disposition ヘッダから抽出したファイル名で保存します。
     /// </summary>
     /// <param name="url">ダウンロードするファイルの URL。</param>
     /// <param name="outputDirectory">ファイルを保存するディレクトリのパス。</param>
     /// <param name="customFilename">オプション。使用するファイル名を明示的に指定します。指定しない場合はサーバーから取得します。</param>
+    /// <param name="overwrite">既存ファイルを上書きする場合は true。省略時は false。</param>
     /// <returns>ダウンロードされたファイルの絶対パス。失敗した場合は null。</returns>
-    public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null)
+    public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null, bool overwrite = false)
     {
         try
         {
-            using var httpClient = new HttpClient();
-            
             // リダイレクトを追跡して最終的なレスポンスを取得
-            var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
 
             response.EnsureSuccessStatusCode();
 
@@ -55,6 +73,20 @@ class FileDownloader
 
             // 出力ファイルパス
             string outputPath = System.IO.Path.Combine(outputDirectory, downloadedFilename);
+
+            // ファイルが既に存在する場合、ユーザーに確認
+            if (System.IO.File.Exists(outputPath) && !overwrite)
+            {
+                Console.Write($"ファイル '{downloadedFilename}' は既に存在します。上書きしますか？(y/n): ");
+                var keyInfo = Console.ReadKey(false);
+                Console.WriteLine(); // 改行
+                
+                if (keyInfo.Key != ConsoleKey.Y)
+                {
+                    Console.WriteLine("ダウンロードをキャンセルしました。");
+                    return null;
+                }
+            }
 
             // ファイルをダウンロード
             using (var stream = await response.Content.ReadAsStreamAsync())
@@ -125,5 +157,39 @@ class FileDownloader
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// FileDownloader インスタンスを破棄します。
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// 指定されたdisposedフラグに従ってリソースを破棄します。
+    /// </summary>
+    /// <param name="disposing">マネージリソースを破棄する場合は true。</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // マネージリソースを破棄
+                _httpClient?.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+
+    /// <summary>
+    /// FileDownloader インスタンスのデストラクタ。
+    /// </summary>
+    ~FileDownloader()
+    {
+        Dispose(false);
     }
 }
