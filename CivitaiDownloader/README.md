@@ -24,9 +24,12 @@ dotnet CivitaiDownloader.dll -url "<ダウンロードURL>"
 
 | オプション | 説明 |
 |-----------|------|
-| `-url <URL>` | ダウンロードする URL（必須） |
+| `<URL>` | ダウンロードする URL（位置パラメータ、または `-url` オプション） |
+| `-url <URL>` | ダウンロードする URL（オプション） |
 | `-output <ディレクトリ>` | 出力ディレクトリ（デフォルト: カレントディレクトリ） |
 | `-filename <ファイル名>` | ファイル名（指定なしはサーバーから取得） |
+| `-token <トークン>` | アクセストークン（環境変数 `CIVITAI_API_KEY` も使用可能） |
+| `-y` | 既存ファイルを自動的に上書き（確認なし） |
 | `-h, --help` | 使用方法を表示 |
 
 ### 使用例
@@ -67,3 +70,22 @@ sudo apt update && sudo apt install -y dotnet-runtime-10.0
 
 # 実行
 dotnet CivitaiDownloader.dll -url "https://civitai.com/api/download/models/123"
+```
+
+## テスト
+
+```bash
+dotnet test CivitaiDownloader.sln
+```
+
+## ドキュメント
+
+詳細なドキュメントは `docs/` ディレクトリに格納しています。
+
+| ドキュメント | 説明 |
+|-------------|------|
+| [DATA_FLOW.md](docs/DATA_FLOW.md) | データフロー図（Mermaid で記述） |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | アーキテクチャとクラスの責務マップ |
+| [MEMORY_BANK.md](docs/MEMORY_BANK.md) | メモリーバンク（プロジェクト要約） |
+| [PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) | プロジェクト進捗管理 |
+
