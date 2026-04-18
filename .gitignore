@@ -1,0 +1,43 @@
+# ビルド成果物
+bin/
+obj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio ファイル
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Bb]uild[Bb]ook.*
+*.cache
+*.pidb
+*.svclog
+*.log
+*.log.*
+*.jfm
+*.csproj.user
+*.sln.migrate
+
+# .NET ファイル
+*.dotnet
+*.nupkg
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# テスト結果
+TestResult.xml
+TestResult.*.xml
+*.trx
+*.html
+
+# その他のファイル
+Thumbs.db
+.DS_Store
