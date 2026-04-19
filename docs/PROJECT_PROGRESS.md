@@ -124,6 +124,11 @@
 | 92 | FileDownloaderIntegrationTests.cs にモックテストを追加 | ✅ |
 | 93 | 全テスト実行（成功：63成功、0失敗） | ✅ |
 | 94 | DownloadFileWithMock_WithProgress_ReportsAt1000msIntervals に総報告数のアサーションを追加 | ✅ |
+| 95 | DATA_FLOW.md の Mermaid フロー図のパースエラーを修正 | ✅ |
+| 96 | DATA_FLOW.md の視認性を改善（改行、ノード位置調整） | ✅ |
+| 97 | DATA_FLOW.md にダウンロード結果の3パターン（Success/Cancelled/Failed）を追加 | ✅ |
+| 98 | DATA_FLOW.md に overwrite=true の分岐を追加 | ✅ |
+| 99 | FileDownloader.cs の肥大化に伴うリファクタリングを計画 | 新規 |
 
 ---
 
@@ -132,7 +137,7 @@
 
 | No | タスク | 優先度 | 状態 |
 |----|--------|--------|------|
-| - | 新機能の実装 | - | 新規 |
+| 100 | FileDownloader.cs のリファクタリング（FilenameExtractor, ProgressFormatter への分割） | 高 | 新規 |
 
 ---
 

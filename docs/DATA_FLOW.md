@@ -64,43 +64,35 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[Program.Main] -->|1. args\[\]| B[CommandLineArgs.Parse]
+    A[Program.Main] -->|"1. args[]"| B[CommandLineArgs.Parse]
     B -->|2. CommandLineArgs<br/>Url, OutputDirectory,<br/>Filename, Token, AutoOverwrite| C[FileDownloader.AddTokenToUrl]
     C -->|3. downloadUrl| D[FileDownloader.DownloadFileAsync]
-    
     D -->|4. HTTP Request| E[HttpClient]
     E -->|5. HttpResponseMessage| D
-    
-    D -->|6. Content-Disposition| F[ExtractFilenameFromContentDisposition]
+    D -->|6. Content-Disposition<br/>file name| F[ExtractFilenameFromContentDisposition]
     F -->|7. filename string| D
-    
-    D -->|8. customFilename| G[Check custom filename]
+    D -->|8. customFilename| G{Check custom filename}
+    G -->|Yes| I[outputPath]
     G -->|No| H[ExtractFilenameFromUrl]
-    H -->|8. filename string| D
-    
-    D -->|9. outputDirectory + filename| I[outputPath]
-    
-    I -->|10. overwrite=false 且つファイルが存在| J[User Confirmation]
-    J -->|y| D
-    J -->|n| K[Cancel]
-    
-    D -->|11. HTTP Response| L[Download File]
-    L -->|12. File Stream| I
-    
-    D -->|13. FileExists| M[IFileSystem]
-    D -->|14. ReadKey| M
+    H -->|8. filename string| I[outputPath]
+    I -->|overwrite=false<br/>file exists?| J{User Confirmation}
+    J -->|y| Q[Download File]
+    J -->|n| N[Cancel]
+    I -->|overwrite=true| Q
     
     style A fill:#e1f5ff
     style B fill:#e1f5ff
     style C fill:#e1f5ff
     style D fill:#e1f5ff
-    style M fill:#fff4e1
+    style I fill:#e1f5ff
+    style Q fill:#fff4e1
+    style N fill:#ffe1e1
 ```
 
 ## メソッド呼び出し順序とデータフロー
 
 ```mermaid
-flowchart LR
+flowchart TD
     Start[Program.Main] --> Parse[CommandLineArgs.Parse]
     Parse --> TokenUrl[FileDownloader.AddTokenToUrl]
     TokenUrl --> Download[FileDownloader.DownloadFileAsync]
@@ -109,24 +101,25 @@ flowchart LR
     HttpClient --> Headers[Content-Disposition Headers]
     Headers --> ExtractFilename[ExtractFilenameFromContentDisposition]
     ExtractFilename --> CheckFilename{Filename Found?}
-    CheckFilename -->|Yes| SaveFile
+    CheckFilename -->|Yes| SaveFile[Save File]
     CheckFilename -->|No| ExtractUrl[ExtractFilenameFromUrl]
     ExtractUrl --> CheckUrl{Filename Found?}
     CheckUrl -->|Yes| SaveFile
-    CheckUrl -->|No| Cancel[Return null]
+    CheckUrl -->|No| Failed[Status=Failed]
     
-    SaveFile[Save File] --> CheckOverwrite{overwrite=false<br/>and file exists?}
+    SaveFile --> CheckOverwrite{overwrite=false<br/>and file exists?}
     CheckOverwrite -->|Yes| UserConfirm[User Confirmation]
+    CheckOverwrite -->|overwrite=true| DownloadData[Download Data]
     UserConfirm --> CheckKey{Key == Y?}
     CheckKey -->|Yes| DownloadData
-    CheckKey -->|No| Cancel
+    CheckKey -->|No| Cancel[Status=Cancelled]
     
-    DownloadData[Download Data] --> Progress[Report Progress]
+    DownloadData --> Progress[Report Progress]
     Progress --> CheckProgress{1000ms passed?}
     CheckProgress -->|Yes| Progress
     CheckProgress -->|No| DownloadData
     
-    DownloadData --> End[Return outputPath]
+    DownloadData --> Success[Return outputPath, Status=Success]
     
     style Start fill:#e1f5ff
     style Parse fill:#e1f5ff
@@ -140,8 +133,9 @@ flowchart LR
     style UserConfirm fill:#fff4e1
     style DownloadData fill:#fff4e1
     style Progress fill:#fff4e1
-    style End fill:#e1f5ff
+    style Success fill:#e1f5ff
     style Cancel fill:#ffe1e1
+    style Failed fill:#ffe1e1
 ```
 
 ## 進捗報告フロー
@@ -154,9 +148,9 @@ flowchart TD
     UpdateRead --> CheckTime{Time >= 1000ms<br/>since last report?}
     
     CheckTime -->|Yes| Report[Report Progress<br/>progress, downloaded, total]
-    CheckTime -->|No| NextRead
+    CheckTime -->|No| NextRead[Next Buffer Read]
     
-    Report --> NextRead[Next Buffer Read]
+    Report --> NextRead
     NextRead --> CheckRead{Bytes Read > 0?}
     
     CheckRead -->|Yes| ReadBuffer
