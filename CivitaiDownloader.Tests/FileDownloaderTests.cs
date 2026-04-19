@@ -626,29 +626,46 @@ public class FileDownloaderTests
     public async Task DownloadFileAsync_ReturnsDownloadResult()
     {
         // Arrange
+        var delayedStream = new DelayedStream(new byte[1024], 0);
+        var httpContent = new DelayedHttpContent(delayedStream);
+        
         var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         mockHttpMessageHandler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = System.Net.HttpStatusCode.OK,
-                Content = new StringContent("downloaded content")
-                {
-                    Headers = { ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment") { FileName = "test.zip" } }
-                }
+                Content = httpContent
             });
 
         var httpClient = new HttpClient(mockHttpMessageHandler.Object);
-        var downloader = new FileDownloader(httpClient, new DefaultFileSystem());
+        var mockFileSystem = new Mock<IFileSystem>();
+        mockFileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        var downloader = new FileDownloader(httpClient, mockFileSystem.Object);
 
-        // Act
-        var result = await downloader.DownloadFileAsync("https://example.com/test.zip", Path.GetTempPath());
+        string tempDir = Path.GetTempPath();
+        string tempFileName = $"test_{Guid.NewGuid()}.zip";
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.FilePath);
-        Assert.Equal(FileDownloader.DownloadStatus.Success, result.Status);
-        Assert.Null(result.ErrorMessage);
+        try
+        {
+            // Act
+            var result = await downloader.DownloadFileAsync("https://example.com/test.zip", tempDir, customFilename: tempFileName, overwrite: false);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.NotNull(result.FilePath);
+            Assert.Equal(FileDownloader.DownloadStatus.Success, result.Status);
+            Assert.Null(result.ErrorMessage);
+        }
+        finally
+        {
+            // テストファイルを削除
+            string tempFilePath = Path.Combine(tempDir, tempFileName);
+            if (File.Exists(tempFilePath))
+            {
+                File.Delete(tempFilePath);
+            }
+        }
     }
 
     /// <summary>
