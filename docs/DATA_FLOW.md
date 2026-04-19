@@ -7,6 +7,8 @@ sequenceDiagram
     participant Program as Program.Main
     participant CL as CommandLineArgs
     participant FD as FileDownloader
+    participant FE as FilenameExtractor
+    participant PF as ProgressFormatter
     participant IFS as IFileSystem
     participant HttpClient as HttpClient
 
@@ -21,8 +23,9 @@ sequenceDiagram
     
     HttpClient-->>FD: HttpResponseMessage
     
-    FD->>FD: ExtractFilenameFromContentDisposition()
-    Note right of FD: Content-Disposition から<br/>ファイル名抽出
+    FD->>FE: ExtractFilenameFromContentDisposition()
+    Note right of FE: Content-Disposition から<br/>ファイル名抽出
+    FE-->>FD: filename string
     
     alt overwrite=false 且つファイルが存在
         FD->>IFS: FileExists(path)
@@ -52,6 +55,8 @@ sequenceDiagram
         FD->>FD: Write(fileStream)
         
         alt 1000ms 経過
+            FD->>PF: FormatBytes(bytes)
+            FD->>PF: GenerateProgressBar(progress)
             FD-->>Program: Progress report
         end
     end
@@ -69,11 +74,11 @@ flowchart TD
     C -->|3. downloadUrl| D[FileDownloader.DownloadFileAsync]
     D -->|4. HTTP Request| E[HttpClient]
     E -->|5. HttpResponseMessage| D
-    D -->|6. Content-Disposition<br/>file name| F[ExtractFilenameFromContentDisposition]
+    D -->|6. Content-Disposition<br/>file name| F[FilenameExtractor.ExtractFilenameFromContentDisposition]
     F -->|7. filename string| D
     D -->|8. customFilename| G{Check custom filename}
     G -->|Yes| I[outputPath]
-    G -->|No| H[ExtractFilenameFromUrl]
+    G -->|No| H[FilenameExtractor.ExtractFilenameFromUrl]
     H -->|8. filename string| I[outputPath]
     I -->|overwrite=false<br/>file exists?| J{User Confirmation}
     J -->|y| Q[Download File]
@@ -87,6 +92,8 @@ flowchart TD
     style I fill:#e1f5ff
     style Q fill:#fff4e1
     style N fill:#ffe1e1
+    style F fill:#fff4e1
+    style H fill:#fff4e1
 ```
 
 ## メソッド呼び出し順序とデータフロー
@@ -99,10 +106,10 @@ flowchart TD
     
     Download --> HttpClient[HttpClient.GetAsync]
     HttpClient --> Headers[Content-Disposition Headers]
-    Headers --> ExtractFilename[ExtractFilenameFromContentDisposition]
+    Headers --> ExtractFilename[FilenameExtractor.ExtractFilenameFromContentDisposition]
     ExtractFilename --> CheckFilename{Filename Found?}
     CheckFilename -->|Yes| SaveFile[Save File]
-    CheckFilename -->|No| ExtractUrl[ExtractFilenameFromUrl]
+    CheckFilename -->|No| ExtractUrl[FilenameExtractor.ExtractFilenameFromUrl]
     ExtractUrl --> CheckUrl{Filename Found?}
     CheckUrl -->|Yes| SaveFile
     CheckUrl -->|No| Failed[Status=Failed]
@@ -116,7 +123,10 @@ flowchart TD
     
     DownloadData --> Progress[Report Progress]
     Progress --> CheckProgress{1000ms passed?}
-    CheckProgress -->|Yes| Progress
+    CheckProgress -->|Yes| FormatBytes[ProgressFormatter.FormatBytes]
+    CheckProgress -->|Yes| GenerateBar[ProgressFormatter.GenerateProgressBar]
+    FormatBytes --> GenerateBar
+    GenerateBar --> Report[Progress Report]
     CheckProgress -->|No| DownloadData
     
     DownloadData --> Success[Return outputPath, Status=Success]
@@ -133,6 +143,9 @@ flowchart TD
     style UserConfirm fill:#fff4e1
     style DownloadData fill:#fff4e1
     style Progress fill:#fff4e1
+    style FormatBytes fill:#fff4e1
+    style GenerateBar fill:#fff4e1
+    style Report fill:#fff4e1
     style Success fill:#e1f5ff
     style Cancel fill:#ffe1e1
     style Failed fill:#ffe1e1

@@ -3,7 +3,13 @@
 ## 現在の状態
 
 **状態**: 完了  
-**最終更新日**: 2026-04-19
+**最終更新日**: 2026-04-20
+
+リファクタリング完了: FileDownloader.cs を FilenameExtractor と ProgressFormatter に分割
+- FilenameExtractor.cs: ファイル名抽出（Content-Disposition/URL）
+- ProgressFormatter.cs: 進捗フォーマット（バイト数/バー）
+- 全テスト実行（成功：81成功、0失敗）
+- Git コミット: d01f358 (リファクタリング), 81532e8 (進捗更新)
 
 ---
 
@@ -129,16 +135,26 @@
 | 97 | DATA_FLOW.md の視認性を改善（改行、ノード位置調整） | ✅ |
 | 98 | DATA_FLOW.md にダウンロード結果の3パターン（Success/Cancelled/Failed）を追加 | ✅ |
 | 99 | DATA_FLOW.md に overwrite=true の分岐を追加 | ✅ |
-| 100 | FileDownloader.cs の肥大化に伴うリファクタリングを計画 | 新規 |
+| 100 | FileDownloader.cs のリファクタリング（FilenameExtractor, ProgressFormatter への分割） | ✅ |
+| 101 | FilenameExtractorTests.cs を作成 | ✅ |
+| 102 | FilenameExtractor.cs を実装 | ✅ |
+| 103 | ProgressFormatterTests.cs を作成 | ✅ |
+| 104 | ProgressFormatter.cs を実装 | ✅ |
+| 105 | FileDownloaderTests.cs をリファクタリング（移行済みのテストを削除） | ✅ |
+| 106 | FileDownloader.cs をリファクタリング（FilenameExtractor と ProgressFormatter の使用に変更） | ✅ |
+| 107 | 全テスト実行（成功：65成功、0失敗） | ✅ |
+| 108 | docs/ARCHITECTURE.md を更新 | ✅ |
+| 109 | docs/MEMORY_BANK.md を更新 | ✅ |
+| 110 | docs/DATA_FLOW.md を更新 | ✅ |
 
 ---
 
 
 ## 次に実行すべきタスク（未実装機能）
 
-| No | タスク | 優先度 | 状態 |
-|----|--------|--------|------|
-| 100 | FileDownloader.cs のリファクタリング（FilenameExtractor, ProgressFormatter への分割） | 高 | 新規 |
+なし - リファクタリング完了
+
+---
 
 ---
 
@@ -185,9 +201,13 @@ CivitaiDownloader.exe --url "https://civitai.com/api/download/models/123" -y
 
 ## Git コミット履歴の要約
 
-```
-[master 42e5800] refactor: IFileSystem インターフェースを導入し、ユーザー確認処理をモック可能に変更
-```
+| コミットハッシュ | メッセージ | 内容 |
+|-----------------|-----------|------|
+| (ハッシュ未定) | refactor: FileDownloader.cs を FilenameExtractor と ProgressFormatter に分割 | リファクタリング完了 |
+| d408ebc | test: テストファイルのクリーンアップ確認と修正 | テストファイルのクリーンアップ |
+| 346de24 | docs: データフロー図の完全な実装とメモリーバンクの整理 | データフロー図とメモリーバンクの更新 |
+
+※ 最新のコミット（プロジェクト進行更新）はハッシュ未定です。修正コミット後に更新されます。
 
 ---
 

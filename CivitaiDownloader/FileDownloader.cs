@@ -1,7 +1,6 @@
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.IO;
 
@@ -108,7 +107,7 @@ public class FileDownloader : IDisposable
 
             if (response.Content.Headers.ContentDisposition != null)
             {
-                downloadedFilename = ExtractFilenameFromContentDisposition(response.Content.Headers.ContentDisposition.ToString());
+                downloadedFilename = FilenameExtractor.ExtractFilenameFromContentDisposition(response.Content.Headers.ContentDisposition.ToString());
             }
 
             // カスタムファイル名が指定されている場合はそれを使用
@@ -119,7 +118,7 @@ public class FileDownloader : IDisposable
             // サーバーから取得したファイル名がなければ、URLから推測
             else if (string.IsNullOrEmpty(downloadedFilename))
             {
-                downloadedFilename = ExtractFilenameFromUrl(url);
+                downloadedFilename = FilenameExtractor.ExtractFilenameFromUrl(url);
             }
 
             // ファイル名がまだ取得できない場合はエラー
@@ -212,60 +211,6 @@ public class FileDownloader : IDisposable
     }
 
     /// <summary>
-    /// Content-Disposition ヘッダの値からファイル名を抽出します。
-    /// </summary>
-    /// <param name="contentDisposition">Content-Disposition ヘッダの値。例: "attachment; filename=\"filename.zip\""</param>
-    /// <returns>抽出されたファイル名。ファイル名が見つからない場合は null。</returns>
-    static string ExtractFilenameFromContentDisposition(string contentDisposition)
-    {
-        if (string.IsNullOrEmpty(contentDisposition))
-        {
-            return null;
-        }
-
-        // filename="value" の形式（旧形式）からファイル名を抽出
-        var match = Regex.Match(contentDisposition, @"filename=""([^""]+)""");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim();
-        }
-
-        // filename=value の形式（クォートなし）からファイル名を抽出
-        match = Regex.Match(contentDisposition, @"filename=([^\s;]+)");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim().Trim('"');
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// URL からファイル名を抽出します。
-    /// </summary>
-    /// <param name="url">ファイルを含む URL。</param>
-    /// <returns>抽出されたファイル名。抽出できない場合は null。</returns>
-    static string ExtractFilenameFromUrl(string url)
-    {
-        try
-        {
-            var uri = new Uri(url);
-            var path = uri.AbsolutePath;
-            var fileName = System.IO.Path.GetFileName(path);
-            if (!string.IsNullOrEmpty(fileName))
-            {
-                return fileName;
-            }
-        }
-        catch
-        {
-            // URL解析に失敗した場合は null を返す
-        }
-
-        return null;
-    }
-
-    /// <summary>
     /// FileDownloader インスタンスを破棄します。
     /// </summary>
     public void Dispose()
@@ -300,48 +245,6 @@ public class FileDownloader : IDisposable
     }
 
     /// <summary>
-    /// バイト数を適切な単位に変換します。
-    /// </summary>
-    /// <param name="bytes">バイト数。</param>
-    /// <returns>変換されたバイト数（単位付き）。</returns>
-    internal static string FormatBytes(long bytes)
-    {
-        if (bytes < 1024)
-        {
-            return $"{bytes} B";
-        }
-        else if (bytes < 1024 * 1024)
-        {
-            return $"{bytes / 1024.0:0.###} KB";
-        }
-        else if (bytes < 1024 * 1024 * 1024)
-        {
-            return $"{bytes / (1024.0 * 1024.0):0.###} MB";
-        }
-        else
-        {
-            return $"{bytes / (1024.0 * 1024.0 * 1024.0):0.###} GB";
-        }
-    }
-
-    /// <summary>
-    /// 進捗バーを生成します。
-    /// </summary>
-    /// <param name="progress">進捗率（0.0 から 1.0 の範囲）。</param>
-    /// <param name="width">バーの長さ。</param>
-    /// <returns>生成された進捗バー文字列。</returns>
-    internal static string GenerateProgressBar(double progress, int width = 20)
-    {
-        if (progress < 0) progress = 0;
-        if (progress > 1) progress = 1;
-
-        int filled = (int)(progress * width);
-        int empty = width - filled;
-
-        return "[" + new string('#', filled) + new string('-', empty) + "]";
-    }
-
-    /// <summary>
     /// URL に token を追加します（Token が指定されている場合のみ）。
     /// </summary>
     /// <param name="url">元の URL。</param>
@@ -355,4 +258,19 @@ public class FileDownloader : IDisposable
         string separator = url.Contains("?") ? "&" : "?";
         return $"{url}{separator}token={token}";
     }
+
+    /// <summary>
+    /// バイト数を適切な単位に変換します。
+    /// </summary>
+    /// <param name="bytes">バイト数。</param>
+    /// <returns>変換されたバイト数（単位付き）。</returns>
+    internal static string FormatBytes(long bytes) => ProgressFormatter.FormatBytes(bytes);
+
+    /// <summary>
+    /// 進捗バーを生成します。
+    /// </summary>
+    /// <param name="progress">進捗率（0.0 から 1.0 の範囲）。</param>
+    /// <param name="width">バーの長さ。</param>
+    /// <returns>生成された進捗バー文字列。</returns>
+    internal static string GenerateProgressBar(double progress, int width = 20) => ProgressFormatter.GenerateProgressBar(progress, width);
 }

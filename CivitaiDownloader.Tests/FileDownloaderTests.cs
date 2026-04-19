@@ -10,7 +10,8 @@ using CivitaiDownloader.Tests.Mocks;
 
 /// <summary>
 /// FileDownloader クラスの単体テスト。
-/// FileDownloader は Civitai からファイルをダウンロードし、Content-Disposition ヘッダからファイル名を抽出します。
+/// FileDownloader は Civitai からファイルをダウンロードし、Content-Disposition ヘッダから正しいファイル名を抽出します。
+/// ファイル名抽出と進捗フォーマットのテストは FilenameExtractorTests と ProgressFormatterTests に移行しました。
 /// </summary>
 public class FileDownloaderTests
 {
@@ -19,118 +20,6 @@ public class FileDownloaderTests
     /// </summary>
     public FileDownloaderTests()
     {
-    }
-
-    /// <summary>
-    /// Content-Disposition からファイル名を抽出するテスト（クォート付き）。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromContentDisposition_WithQuotedFilename_ReturnsFilename()
-    {
-        // Arrange
-        string contentDisposition = "attachment; filename=\"animaPreviewWorkflow_v40.zip\"";
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromContentDisposition(contentDisposition);
-        
-        // Assert
-        Assert.Equal("animaPreviewWorkflow_v40.zip", result);
-    }
-
-    /// <summary>
-    /// Content-Disposition からファイル名を抽出するテスト（クォートなし）。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromContentDisposition_WithoutQuotedFilename_ReturnsFilename()
-    {
-        // Arrange
-        string contentDisposition = "attachment; filename=test_file.zip";
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromContentDisposition(contentDisposition);
-        
-        // Assert
-        Assert.Equal("test_file.zip", result);
-    }
-
-    /// <summary>
-    /// Content-Disposition が null の場合のテスト。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromContentDisposition_WithNullInput_ReturnsNull()
-    {
-        // Arrange
-        string contentDisposition = null;
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromContentDisposition(contentDisposition);
-        
-        // Assert
-        Assert.Null(result);
-    }
-
-    /// <summary>
-    /// Content-Disposition が空文字の場合のテスト。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromContentDisposition_WithEmptyInput_ReturnsNull()
-    {
-        // Arrange
-        string contentDisposition = "";
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromContentDisposition(contentDisposition);
-        
-        // Assert
-        Assert.Null(result);
-    }
-
-    /// <summary>
-    /// URL からファイル名を抽出するテスト。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromUrl_WithValidUrl_ReturnsFilename()
-    {
-        // Arrange
-        string url = "https://civitai.com/api/download/models/123/file.zip";
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromUrl(url);
-        
-        // Assert
-        Assert.Equal("file.zip", result);
-    }
-
-    /// <summary>
-    /// URL の末尾がスラッシュの場合のテスト。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromUrl_WithTrailingSlash_ReturnsNull()
-    {
-        // Arrange
-        string url = "https://civitai.com/api/download/models/123/";
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromUrl(url);
-        
-        // Assert
-        Assert.Null(result);
-    }
-
-    /// <summary>
-    /// URL が無効な場合のテスト。
-    /// </summary>
-    [Fact]
-    public void ExtractFilenameFromUrl_WithInvalidUrl_ReturnsNull()
-    {
-        // Arrange
-        string url = "not-a-valid-url";
-        
-        // Act
-        string result = FileDownloaderTests.ExtractFilenameFromUrl(url);
-        
-        // Assert
-        Assert.Null(result);
     }
 
     /// <summary>
@@ -296,257 +185,6 @@ public class FileDownloaderTests
     }
 
     /// <summary>
-    /// Content-Disposition からファイル名を抽出します。
-    /// </summary>
-    /// <param name="contentDisposition">Content-Disposition ヘッダの値。</param>
-    /// <returns>抽出されたファイル名。ファイル名が見つからない場合は null。</returns>
-    static string ExtractFilenameFromContentDisposition(string contentDisposition)
-    {
-        if (string.IsNullOrEmpty(contentDisposition))
-        {
-            return null;
-        }
-
-        // filename="value" の形式からファイル名を抽出
-        var match = System.Text.RegularExpressions.Regex.Match(contentDisposition, @"filename=""([^""]+)""");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim();
-        }
-
-        // filename=value の形式からファイル名を抽出
-        match = System.Text.RegularExpressions.Regex.Match(contentDisposition, @"filename=([^\s;]+)");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim().Trim('"');
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// URL からファイル名を抽出します。
-    /// </summary>
-    /// <param name="url">ファイルを含む URL。</param>
-    /// <returns>抽出されたファイル名。抽出できない場合は null。</returns>
-    static string ExtractFilenameFromUrl(string url)
-    {
-        try
-        {
-            var uri = new Uri(url);
-            var path = uri.AbsolutePath;
-            var fileName = Path.GetFileName(path);
-            if (!string.IsNullOrEmpty(fileName))
-            {
-                return fileName;
-            }
-        }
-        catch
-        {
-            // URL解析に失敗した場合は null を返す
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// バイト数を適切な単位に変換するテスト（B単位）。
-    /// </summary>
-    [Fact]
-    public void FormatBytes_WithBytes_ReturnsBytes()
-    {
-        // Arrange
-        long bytes = 512;
-        
-        // Act
-        string result = FileDownloader.FormatBytes(bytes);
-        
-        // Assert
-        Assert.Equal("512 B", result);
-    }
-
-    /// <summary>
-    /// バイト数を適切な単位に変換するテスト（KB単位）。
-    /// </summary>
-    [Fact]
-    public void FormatBytes_WithKilobytes_ReturnsKB()
-    {
-        // Arrange
-        long bytes = 1536; // 1.5 KB
-        
-        // Act
-        string result = FileDownloader.FormatBytes(bytes);
-        
-        // Assert
-        Assert.Contains("KB", result);
-    }
-
-    /// <summary>
-    /// バイト数を適切な単位に変換するテスト（MB単位）。
-    /// </summary>
-    [Fact]
-    public void FormatBytes_WithMegabytes_ReturnsMB()
-    {
-        // Arrange
-        long bytes = 1572864; // 1.5 MB
-        
-        // Act
-        string result = FileDownloader.FormatBytes(bytes);
-        
-        // Assert
-        Assert.Contains("MB", result);
-    }
-
-    /// <summary>
-    /// バイト数を適切な単位に変換するテスト（GB単位）。
-    /// </summary>
-    [Fact]
-    public void FormatBytes_WithGigabytes_ReturnsGB()
-    {
-        // Arrange
-        long bytes = 1610612736; // 1.5 GB
-        
-        // Act
-        string result = FileDownloader.FormatBytes(bytes);
-        
-        // Assert
-        Assert.Contains("GB", result);
-    }
-
-    /// <summary>
-    /// 進捗バー生成のテスト（0%）。
-    /// </summary>
-    [Fact]
-    public void GenerateProgressBar_With0Percent_ReturnsEmptyBar()
-    {
-        // Arrange
-        double progress = 0.0;
-        
-        // Act
-        string result = FileDownloader.GenerateProgressBar(progress);
-        
-        // Assert
-        Assert.Equal("[--------------------]", result);
-    }
-
-    /// <summary>
-    /// 進捗バー生成のテスト（50%）。
-    /// </summary>
-    [Fact]
-    public void GenerateProgressBar_With50Percent_ReturnsHalfBar()
-    {
-        // Arrange
-        double progress = 0.5;
-        
-        // Act
-        string result = FileDownloader.GenerateProgressBar(progress);
-        
-        // Assert
-        Assert.Equal("[##########----------]", result);
-    }
-
-    /// <summary>
-    /// 進捗バー生成のテスト（100%）。
-    /// </summary>
-    [Fact]
-    public void GenerateProgressBar_With100Percent_ReturnsFullBar()
-    {
-        // Arrange
-        double progress = 1.0;
-        
-        // Act
-        string result = FileDownloader.GenerateProgressBar(progress);
-        
-        // Assert
-        Assert.Equal("[####################]", result);
-    }
-
-    /// <summary>
-    /// AddTokenToUrl のテスト：Token が指定されている場合、URL に token が追加されます。
-    /// </summary>
-    [Fact]
-    public void AddTokenToUrl_WithToken_AddsTokenToUrl()
-    {
-        // Arrange
-        string url = "https://example.com/api/download";
-        string token = "test_token_123";
-
-        // Act
-        string result = FileDownloader.AddTokenToUrl(url, token);
-
-        // Assert
-        Assert.Equal("https://example.com/api/download?token=test_token_123", result);
-    }
-
-    /// <summary>
-    /// AddTokenToUrl のテスト：Token が null の場合、URL は変更されません。
-    /// </summary>
-    [Fact]
-    public void AddTokenToUrl_WithNullToken_DoesNotModifyUrl()
-    {
-        // Arrange
-        string url = "https://example.com/api/download";
-        string token = null;
-
-        // Act
-        string result = FileDownloader.AddTokenToUrl(url, token);
-
-        // Assert
-        Assert.Equal("https://example.com/api/download", result);
-    }
-
-    /// <summary>
-    /// AddTokenToUrl のテスト：Token が空文字の場合、URL は変更されません。
-    /// </summary>
-    [Fact]
-    public void AddTokenToUrl_WithEmptyToken_DoesNotModifyUrl()
-    {
-        // Arrange
-        string url = "https://example.com/api/download";
-        string token = "";
-
-        // Act
-        string result = FileDownloader.AddTokenToUrl(url, token);
-
-        // Assert
-        Assert.Equal("https://example.com/api/download", result);
-    }
-
-    /// <summary>
-    /// AddTokenToUrl のテスト：URL に既にクエリパラメータがある場合、& で token が追加されます。
-    /// </summary>
-    [Fact]
-    public void AddTokenToUrl_WithExistingQuery_AddsTokenWithAmpersand()
-    {
-        // Arrange
-        string url = "https://example.com/api/download?format=zip";
-        string token = "test_token_123";
-
-        // Act
-        string result = FileDownloader.AddTokenToUrl(url, token);
-
-        // Assert
-        Assert.Equal("https://example.com/api/download?format=zip&token=test_token_123", result);
-    }
-
-    /// <summary>
-    /// AddTokenToUrl のテスト：URL に既にクエリパラメータがあり、かつ末尾が & の場合、token が追加されます。
-    /// </summary>
-    [Fact]
-    public void AddTokenToUrl_WithQueryEndingInAmpersand_AddsTokenAfterAmpersand()
-    {
-        // Arrange
-        string url = "https://example.com/api/download?format=zip&";
-        string token = "test_token_123";
-
-        // Act
-        string result = FileDownloader.AddTokenToUrl(url, token);
-
-        // Assert
-        Assert.Equal("https://example.com/api/download?format=zip&&token=test_token_123", result);
-    }
-
-    /// <summary>
     /// カスタムストリームを使用して、100%報告後に途中経過が報告されないことを確認するテスト。
     /// </summary>
     [Fact]
@@ -554,18 +192,18 @@ public class FileDownloaderTests
     {
         // Arrange
         var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total)>();
-        
+
         // カスタムストリームを作成（100ms遅延、81920バイトごとに返す）
         // Content-Length を大きく設定して、複数回の報告が発生するようにする
         int contentSize = 100000; // 100KB
         byte[] contentBytes = new byte[contentSize];
         new System.Random().NextBytes(contentBytes);
-        
+
         var delayedStream = new DelayedStream(contentBytes, 100, 81920);
-        
+
         // カスタム HttpContent を作成
         var customContent = new DelayedHttpContent(delayedStream);
-        
+
         var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         mockHttpMessageHandler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
@@ -591,11 +229,11 @@ public class FileDownloaderTests
         // Assert
         Assert.NotNull(result);
         Assert.True(reportedProgress.Count > 0, $"進捗が1回も報告されていません (報告回数: {reportedProgress.Count})");
-        
+
         // 最後の報告が100%であることを確認
         var finalReport = reportedProgress[reportedProgress.Count - 1];
         Assert.Equal(1.0, finalReport.progress);
-        
+
         // テスト用に：100%報告後に途中経過が報告されていないか確認
         bool found100Percent = false;
         foreach (var report in reportedProgress)
@@ -610,7 +248,7 @@ public class FileDownloaderTests
                 Assert.Fail("100%報告後に途中経過が報告されました");
             }
         }
-        
+
         // 後処理：一時ファイルを削除
         string tempFilePath = Path.Combine(tempDir, tempFileName);
         if (File.Exists(tempFilePath))
@@ -628,7 +266,7 @@ public class FileDownloaderTests
         // Arrange
         var delayedStream = new DelayedStream(new byte[1024], 0);
         var httpContent = new DelayedHttpContent(delayedStream);
-        
+
         var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         mockHttpMessageHandler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
@@ -720,5 +358,90 @@ public class FileDownloaderTests
                 File.Delete(existingFilePath);
             }
         }
+    }
+
+    /// <summary>
+    /// AddTokenToUrl のテスト：Token が指定されている場合、URL に token が追加されます。
+    /// </summary>
+    [Fact]
+    public void AddTokenToUrl_WithToken_AddsTokenToUrl()
+    {
+        // Arrange
+        string url = "https://example.com/api/download";
+        string token = "test_token_123";
+
+        // Act
+        string result = FileDownloader.AddTokenToUrl(url, token);
+
+        // Assert
+        Assert.Equal("https://example.com/api/download?token=test_token_123", result);
+    }
+
+    /// <summary>
+    /// AddTokenToUrl のテスト：Token が null の場合、URL は変更されません。
+    /// </summary>
+    [Fact]
+    public void AddTokenToUrl_WithNullToken_DoesNotModifyUrl()
+    {
+        // Arrange
+        string url = "https://example.com/api/download";
+        string token = null;
+
+        // Act
+        string result = FileDownloader.AddTokenToUrl(url, token);
+
+        // Assert
+        Assert.Equal("https://example.com/api/download", result);
+    }
+
+    /// <summary>
+    /// AddTokenToUrl のテスト：Token が空文字の場合、URL は変更されません。
+    /// </summary>
+    [Fact]
+    public void AddTokenToUrl_WithEmptyToken_DoesNotModifyUrl()
+    {
+        // Arrange
+        string url = "https://example.com/api/download";
+        string token = "";
+
+        // Act
+        string result = FileDownloader.AddTokenToUrl(url, token);
+
+        // Assert
+        Assert.Equal("https://example.com/api/download", result);
+    }
+
+    /// <summary>
+    /// AddTokenToUrl のテスト：URL に既にクエリパラメータがある場合、& で token が追加されます。
+    /// </summary>
+    [Fact]
+    public void AddTokenToUrl_WithExistingQuery_AddsTokenWithAmpersand()
+    {
+        // Arrange
+        string url = "https://example.com/api/download?format=zip";
+        string token = "test_token_123";
+
+        // Act
+        string result = FileDownloader.AddTokenToUrl(url, token);
+
+        // Assert
+        Assert.Equal("https://example.com/api/download?format=zip&token=test_token_123", result);
+    }
+
+    /// <summary>
+    /// AddTokenToUrl のテスト：URL に既にクエリパラメータがあり、かつ末尾が & の場合、token が追加されます。
+    /// </summary>
+    [Fact]
+    public void AddTokenToUrl_WithQueryEndingInAmpersand_AddsTokenAfterAmpersand()
+    {
+        // Arrange
+        string url = "https://example.com/api/download?format=zip&";
+        string token = "test_token_123";
+
+        // Act
+        string result = FileDownloader.AddTokenToUrl(url, token);
+
+        // Assert
+        Assert.Equal("https://example.com/api/download?format=zip&&token=test_token_123", result);
     }
 }

@@ -19,9 +19,9 @@
 ### 主要なクラス（概要）
 - **Program** - エントリーポイント、CLI UI
 - **CommandLineArgs** - コマンドライン引数の解析と保持
-- **FileDownloader** - ファイルダウンロードの主要ロジック（メイン制御のみ）
-- **FilenameExtractor** - ファイル名抽出（Content-Disposition/URL）
-- **ProgressFormatter** - 進捗表示フォーマット（バイト数/バー）
+- **FileDownloader** - ファイルダウンロードの主要ロジック（メイン制御、他のクラスに責務を委譲）
+- **FilenameExtractor** - ファイル名抽出（Content-Disposition/URL）の静的クラス
+- **ProgressFormatter** - 進捗表示フォーマット（バイト数/バー）の静的クラス
 - **IFileSystem** - ファイルシステム操作の抽象化
 - **DefaultFileSystem** - IFileSystem の実装
 
@@ -32,6 +32,14 @@
 ### テスト用クラス
 - **DelayedStream** - ネットワーク遅延をシミュレートするカスタムストリーム
 - **DelayedHttpContent** - DelayedStream を返すカスタム HttpContent
+
+### テストクラス一覧
+- **FileDownloaderTests** - FileDownloader の単体テスト（DownloadFileAsync, AddTokenToUrl）
+- **FilenameExtractorTests** - FilenameExtractor の単体テスト（ファイル名抽出）
+- **ProgressFormatterTests** - ProgressFormatter の単体テスト（バイト数フォーマット、進捗バー）
+- **CommandLineArgsTests** - CommandLineArgs の単体テスト
+- **ProgramTests** - Program の単体テスト
+- **FileDownloaderIntegrationTests** - 統合テスト（Civitai API連携）
 
 ## テスト戦略
 

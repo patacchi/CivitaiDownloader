@@ -15,16 +15,17 @@ graph TB
     end
     
     subgraph "Domain Layer"
-        D -->|ファイル名抽出| E[FileName Extractors]
-        D -->|HTTP通信| F[HttpClient]
-        D -->|ユーザー確認| G[IFileSystem]
-        D -->|ファイル操作| G
+        D -->|ファイル名抽出| E[FilenameExtractor]
+        D -->|進捗フォーマット| F[ProgressFormatter]
+        D -->|HTTP通信| G[HttpClient]
+        D -->|ユーザー確認| H[IFileSystem]
+        D -->|ファイル操作| H
     end
     
     subgraph "Infrastructure Layer"
-        E -->|正規表現| H[Regex]
-        F -->|HTTP通信| I[Civitai API]
-        G -->|実装| J[DefaultFileSystem]
+        E -->|正規表現| I[Regex]
+        G -->|HTTP通信| J[Civitai API]
+        H -->|実装| K[DefaultFileSystem]
     end
     
     style A fill:#e1f5ff
@@ -34,9 +35,10 @@ graph TB
     style E fill:#fff4e1
     style F fill:#fff4e1
     style G fill:#fff4e1
-    style H fill:#e1ffe1
-    style I fill:#ffe1e1
-    style J fill:#e1ffe1
+    style H fill:#fff4e1
+    style I fill:#e1ffe1
+    style J fill:#ffe1e1
+    style K fill:#e1ffe1
 ```
 
 ## クラスの責務マップ
@@ -45,7 +47,9 @@ graph TB
 |---------|------|------------------------|----------|
 | **Program** | エントリーポイント、CLI UI、主要な制御フロー | `Main()`, `PrintUsage()` | CommandLineArgs, FileDownloader |
 | **CommandLineArgs** | コマンドライン引数の解析と保持 | `Parse()`, `Url`, `OutputDirectory`, `Filename`, `Token`, `AutoOverwrite`, `ShowHelp` | なし |
-| **FileDownloader** | ファイルダウンロードの主要ロジック、Content-Disposition からファイル名抽出 | `DownloadFileAsync()`, `ExtractFilenameFromContentDisposition()`, `ExtractFilenameFromUrl()`, `AddTokenToUrl()`, `FormatBytes()`, `GenerateProgressBar()` | HttpClient, IFileSystem |
+| **FileDownloader** | ファイルダウンロードの主要ロジック、抽出とフォーマットの委譲 | `DownloadFileAsync()`, `AddTokenToUrl()`, `FormatBytes()`, `GenerateProgressBar()` | HttpClient, IFileSystem, FilenameExtractor, ProgressFormatter |
+| **FilenameExtractor** | ファイル名抽出（Content-Disposition/URL） | `ExtractFilenameFromContentDisposition()`, `ExtractFilenameFromUrl()` | Regex |
+| **ProgressFormatter** | 進捗表示フォーマット（バイト数/バー） | `FormatBytes()`, `GenerateProgressBar()` | なし |
 | **IFileSystem** | ファイルシステム操作の抽象化（テスト容易性向上） | `FileExists()`, `DeleteFile()`, `ReadKey()` | なし |
 | **DefaultFileSystem** | IFileSystem の実装（実際のファイルシステム操作） | `FileExists()`, `DeleteFile()`, `ReadKey()` | System.IO, System |
 | **TestConstants** | テストで使用する定数（短時間/長時間リンク） | `CivitaiDownloadUrl_Short`, `ExpectedFilename_Short`, `CivitaiDownloadUrl_Long`, `ExpectedFilename_Long` | なし |
@@ -63,8 +67,11 @@ graph TD
     C --> E[HttpClient]
     C --> F[IFileSystem]
     C --> G[DefaultFileSystem]
+    C --> H[FilenameExtractor]
+    C --> I[ProgressFormatter]
     
     F --> G
+    H --> J[Regex]
     
     style A fill:#e1f5ff
     style B fill:#e1f5ff
@@ -73,6 +80,9 @@ graph TD
     style E fill:#e1ffe1
     style F fill:#fff4e1
     style G fill:#e1ffe1
+    style H fill:#fff4e1
+    style I fill:#fff4e1
+    style J fill:#e1ffe1
 ```
 
 ## 各クラスの詳細説明
@@ -95,15 +105,28 @@ graph TD
   3. 位置パラメータ（URL）を解析
 
 ### FileDownloader
-- **役割**: ファイルダウンロードの主要ロジックを実行
+- **役割**: ファイルダウンロードの主要ロジックを実行（他のクラスに責務を委譲）
 - **主な処理**:
   1. HTTP リクエストを送信
-  2. Content-Disposition ヘッダからファイル名を抽出
-  3. URL からファイル名を抽出
+  2. FilenameExtractor を使用してファイル名を抽出
+  3. ProgressFormatter を使用して進捗フォーマットを処理
   4. ユーザー確認プロンプトを表示
   5. ファイルをストリームでダウンロード
   6. 進捗を報告（1000ms 間隔）
   7. IDisposable を実装して HttpClient を適切に破棄
+
+### FilenameExtractor
+- **役割**: ファイル名を抽出するためのクラス
+- **主な処理**:
+  1. `ExtractFilenameFromContentDisposition`: Content-Disposition ヘッダからファイル名を抽出
+  2. `ExtractFilenameFromUrl`: URL からファイル名を抽出
+  3. 正規表現を使用して柔軟なファイル名抽出
+
+### ProgressFormatter
+- **役割**: 進捗表示フォーマットを処理するためのクラス
+- **主な処理**:
+  1. `FormatBytes`: バイト数を適切な単位（B/KB/MB/GB）に変換
+  2. `GenerateProgressBar`: 進捗率から進捗バー文字列を生成
 
 ### IFileSystem
 - **役割**: ファイルシステム操作の抽象化（テスト容易性向上）
@@ -129,9 +152,17 @@ graph TD
   
 - **Progress Pattern**: IProgress<(double progress, long downloaded, long total)> を使用
   - 進捗報告を非同期で処理
+  
+- **Single Responsibility Principle**: FilenameExtractor と ProgressFormatter の分割
+  - 各クラスが単一の責務を持つように分離
 
 ## テスト戦略
 
-- **単体テスト**: FileDownloaderTests, CommandLineArgsTests, ProgramTests
-- **統合テスト**: FileDownloaderIntegrationTests
+- **単体テスト**:
+  - `FileDownloaderTests`: FileDownloader のダウンロードロジックテスト
+  - `FilenameExtractorTests`: ファイル名抽出のテスト
+  - `ProgressFormatterTests`: 進捗フォーマットのテスト
+  - `CommandLineArgsTests`: コマンドライン引数解析のテスト
+  - `ProgramTests`: Program のテスト
+- **統合テスト**: `FileDownloaderIntegrationTests`
 - **モック**: Moq を使用して HttpClient と IFileSystem をモック
