@@ -22,10 +22,12 @@
 3. **FileDownloader** - ファイルダウンロードの主要ロジック
 4. **IFileSystem** - ファイルシステム操作の抽象化
 5. **DefaultFileSystem** - IFileSystem の実装
+6. **FileDownloader.DownloadResult** - ダウンロード結果を表すクラス（FilePath, Status, ErrorMessage プロパティ）
+7. **FileDownloader.DownloadStatus** - ダウンロード状態を表す列挙型（Success, Cancelled, Failed）
 
 ### テスト用クラス
-6. **DelayedStream** - ネットワーク遅延をシミュレートするカスタムストリーム（テスト用）
-7. **DelayedHttpContent** - DelayedStream を返すカスタム HttpContent（テスト用）
+8. **DelayedStream** - ネットワーク遅延をシミュレートするカスタムストリーム（テスト用）
+9. **DelayedHttpContent** - DelayedStream を返すカスタム HttpContent（テスト用）
 
 ### デザインパターン
 - **Strategy パターン**: IFileSystem と DefaultFileSystem
@@ -65,6 +67,8 @@ sequenceDiagram
 | FileDownloader | ファイルダウンロードの主要ロジック |
 | IFileSystem | ファイルシステム操作の抽象化 |
 | DefaultFileSystem | IFileSystem の実装 |
+| FileDownloader.DownloadResult | ダウンロード結果を表すクラス（FilePath, Status, ErrorMessage プロパティ） |
+| FileDownloader.DownloadStatus | ダウンロード状態を表す列挙型（Success, Cancelled, Failed） |
 | DelayedStream | ネットワーク遅延をシミュレートするカスタムストリーム（テスト用） |
 | DelayedHttpContent | DelayedStream を返すカスタム HttpContent（テスト用） |
 
