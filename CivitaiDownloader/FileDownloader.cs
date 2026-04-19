@@ -128,25 +128,36 @@ public class FileDownloader : IDisposable
                 // 進捗報告の間隔（ミリ秒）
                 const int ProgressUpdateIntervalMs = 1000;
                 DateTime lastProgressReport = DateTime.MinValue;
+                bool progressSessionCompleted = false;
 
                 while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     await fileStream.WriteAsync(buffer, 0, bytesRead);
                     totalRead += bytesRead;
 
-                    // 進捗を報告（1000ms 経過時のみ）
+                    // 進捗を報告（1000ms 経過時のみ、かつセッション完了していない場合）
                     DateTime now = DateTime.Now;
-                    if ((now - lastProgressReport).TotalMilliseconds >= ProgressUpdateIntervalMs)
+                    if (!progressSessionCompleted && (now - lastProgressReport).TotalMilliseconds >= ProgressUpdateIntervalMs)
                     {
                         double progressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 0;
                         progress?.Report((progressPercent, totalRead, totalBytes));
                         lastProgressReport = now;
+
+                        // 100%の場合はセッション完了フラグを立てる
+                        if (progressPercent >= 1.0)
+                        {
+                            progressSessionCompleted = true;
+                        }
                     }
                 }
 
-                // ダウンロード完了時に必ず100%の進捗を報告
-                double finalProgressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 1.0;
-                progress?.Report((finalProgressPercent, totalRead, totalBytes));
+                // ダウンロード完了時に100%の進捗を報告（セッション完了していない場合のみ）
+                if (!progressSessionCompleted)
+                {
+                    double finalProgressPercent = totalBytes > 0 ? (double)totalRead / totalBytes : 1.0;
+                    progress?.Report((finalProgressPercent, totalRead, totalBytes));
+                    progressSessionCompleted = true;
+                }
             }
 
             return outputPath;

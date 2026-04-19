@@ -1,7 +1,11 @@
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Moq;
+using Moq.Protected;
 using Xunit;
+using CivitaiDownloader.Tests.Mocks;
 
 /// <summary>
 /// FileDownloader クラスの統合テスト。
@@ -352,5 +356,153 @@ public class FileDownloaderIntegrationTests : IDisposable
         // 既存のディレクトリとファイルが残っていることを確認
         Assert.True(Directory.Exists(existingDirPath));
         Assert.True(File.Exists(existingFilePath));
+    }
+
+    /// <summary>
+    /// モックを使用して、100%報告後に途中経過が報告されないことを確認するテスト。
+    /// 実際のネットワークアクセスを使用せず、モックでネットワーク遅延をシミュレートします。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFileWithMock_WithProgress_ShouldNotReportFurtherReportsAfter100Percent()
+    {
+        // Arrange
+        var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total)>();
+        
+        // カスタムストリームを作成（100ms遅延、81920バイトごとに返す）
+        int contentSize = 100000; // 100KB
+        byte[] contentBytes = new byte[contentSize];
+        new System.Random().NextBytes(contentBytes);
+        
+        var delayedStream = new DelayedStream(contentBytes, 100, 81920);
+        
+        // カスタム HttpContent を作成
+        var customContent = new DelayedHttpContent(delayedStream);
+        
+        var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = customContent
+            });
+
+        var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+        var downloader = new FileDownloader(httpClient, new DefaultFileSystem());
+
+        // Act
+        string tempDir = Path.GetTempPath();
+        string tempFileName = $"test_{Guid.NewGuid()}.zip";
+        string result = await downloader.DownloadFileAsync(
+            "https://example.com/test.zip",
+            tempDir,
+            customFilename: tempFileName,
+            progress: new Progress<(double progress, long downloaded, long total)>(report => reportedProgress.Add(report))
+        );
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(reportedProgress.Count > 0, $"進捗が1回も報告されていません (報告回数: {reportedProgress.Count})");
+        
+        // 最後の報告が100%であることを確認
+        var finalReport = reportedProgress[reportedProgress.Count - 1];
+        Assert.Equal(1.0, finalReport.progress);
+        
+        // テスト用に：100%報告後に途中経過が報告されていないか確認
+        bool found100Percent = false;
+        foreach (var report in reportedProgress)
+        {
+            if (report.progress >= 1.0)
+            {
+                found100Percent = true;
+            }
+            else if (found100Percent)
+            {
+                // 100%報告後に途中経過が報告された場合、テスト失敗
+                Assert.Fail("100%報告後に途中経過が報告されました");
+            }
+        }
+        
+        // 後処理：一時ファイルを削除
+        string tempFilePath = Path.Combine(tempDir, tempFileName);
+        if (File.Exists(tempFilePath))
+        {
+            File.Delete(tempFilePath);
+        }
+    }
+
+    /// <summary>
+    /// モックを使用して、進捗報告が1000ms間隔で行われることを確認するテスト。
+    /// 実際のネットワークアクセスを使用せず、モックでネットワーク遅延をシミュレートします。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFileWithMock_WithProgress_ReportsAt1000msIntervals()
+    {
+        // Arrange
+        var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total, DateTime timestamp)>();
+        
+        // カスタムストリームを作成（100ms遅延、81920バイトごとに返す）
+        int contentSize = 100000; // 100KB
+        byte[] contentBytes = new byte[contentSize];
+        new System.Random().NextBytes(contentBytes);
+        
+        var delayedStream = new DelayedStream(contentBytes, 100, 81920);
+        
+        // カスタム HttpContent を作成
+        var customContent = new DelayedHttpContent(delayedStream);
+        
+        var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = customContent
+            });
+
+        var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+        var downloader = new FileDownloader(httpClient, new DefaultFileSystem());
+
+        // Act
+        string tempDir = Path.GetTempPath();
+        string tempFileName = $"test_{Guid.NewGuid()}.zip";
+        string result = await downloader.DownloadFileAsync(
+            "https://example.com/test.zip",
+            tempDir,
+            customFilename: tempFileName,
+            progress: new Progress<(double progress, long downloaded, long total)>(report =>
+            {
+                reportedProgress.Add((report.progress, report.downloaded, report.total, DateTime.Now));
+            })
+        );
+
+        // Assert
+        Assert.NotNull(result);
+        
+        // 進捗報告が行われたことを確認
+        Assert.True(reportedProgress.Count > 0, "進捗が報告されませんでした");
+
+        // 進捗報告が2回行われたことを確認（期待される報告回数）
+        // 100KBのデータを81920バイトずつ読み込む場合、約2回の報告が期待される
+        Assert.True(reportedProgress.Count == 2, "進捗報告の回数が期待値と異なります");
+
+        // 進捗報告が100%で終了することを確認
+        var finalReport = reportedProgress[reportedProgress.Count - 1];
+        Assert.Equal(1.0, finalReport.progress, 2);
+
+        // 各報告の確認
+        // 1回目の報告は82%付近（81920/100000）
+        Assert.True(reportedProgress[0].progress > 0.8 && reportedProgress[0].progress < 0.85, 
+            $"1回目の報告が82%付近ではありません: {reportedProgress[0].progress}");
+        
+        // 2回目の報告は100%
+        Assert.Equal(1.0, reportedProgress[1].progress, 2);
+        
+        // 後処理：一時ファイルを削除
+        string tempFilePath = Path.Combine(tempDir, tempFileName);
+        if (File.Exists(tempFilePath))
+        {
+            File.Delete(tempFilePath);
+        }
     }
 }

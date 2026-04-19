@@ -1,10 +1,12 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using CivitaiDownloader.Tests.Mocks;
 
 /// <summary>
 /// FileDownloader クラスの単体テスト。
@@ -539,6 +541,79 @@ public class FileDownloaderTests
 
         // Assert
         Assert.Equal("https://example.com/api/download?format=zip&&token=test_token_123", result);
+    }
+
+    /// <summary>
+    /// カスタムストリームを使用して、100%報告後に途中経過が報告されないことを確認するテスト。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFileAsync_WithCustomDelayedStream_ShouldNotReportFurtherReportsAfter100Percent()
+    {
+        // Arrange
+        var reportedProgress = new System.Collections.Generic.List<(double progress, long downloaded, long total)>();
+        
+        // カスタムストリームを作成（100ms遅延、81920バイトごとに返す）
+        // Content-Length を大きく設定して、複数回の報告が発生するようにする
+        int contentSize = 100000; // 100KB
+        byte[] contentBytes = new byte[contentSize];
+        new System.Random().NextBytes(contentBytes);
+        
+        var delayedStream = new DelayedStream(contentBytes, 100, 81920);
+        
+        // カスタム HttpContent を作成
+        var customContent = new DelayedHttpContent(delayedStream);
+        
+        var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = customContent
+            });
+
+        var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+        var downloader = new FileDownloader(httpClient, new DefaultFileSystem());
+
+        // Act
+        string tempDir = Path.GetTempPath();
+        string tempFileName = $"test_{Guid.NewGuid()}.zip";
+        string result = await downloader.DownloadFileAsync(
+            "https://example.com/test.zip",
+            tempDir,
+            customFilename: tempFileName,
+            progress: new Progress<(double progress, long downloaded, long total)>(report => reportedProgress.Add(report))
+        );
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(reportedProgress.Count > 0, $"進捗が1回も報告されていません (報告回数: {reportedProgress.Count})");
+        
+        // 最後の報告が100%であることを確認
+        var finalReport = reportedProgress[reportedProgress.Count - 1];
+        Assert.Equal(1.0, finalReport.progress);
+        
+        // テスト用に：100%報告後に途中経過が報告されていないか確認
+        bool found100Percent = false;
+        foreach (var report in reportedProgress)
+        {
+            if (report.progress >= 1.0)
+            {
+                found100Percent = true;
+            }
+            else if (found100Percent)
+            {
+                // 100%報告後に途中経過が報告された場合、テスト失敗
+                Assert.Fail("100%報告後に途中経過が報告されました");
+            }
+        }
+        
+        // 後処理：一時ファイルを削除
+        string tempFilePath = Path.Combine(tempDir, tempFileName);
+        if (File.Exists(tempFilePath))
+        {
+            File.Delete(tempFilePath);
+        }
     }
 
 }

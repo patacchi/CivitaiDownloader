@@ -3,7 +3,9 @@
 ## 現在の状態
 
 **状態**: 完了  
-**最終更新日**: 2026-04-18
+**最終更新日**: 2026-04-19
+
+---
 
 ---
 
@@ -111,6 +113,17 @@
 | 81 | ユニークなディレクトリ名生成と既存ディレクトリ保護機能を追加 | ✅ |
 | 82 | 統合テストにディレクトリ作成テストを追加 | ✅ |
 | 83 | ドキュメントの更新（README, MEMORY_BANK, ARCHITECTURE） | ✅ |
+| 84 | FileDownloader.cs に進捗セッションフラグを追加（100%報告後に途中経過が報告されないように修正） | ✅ |
+| 85 | DelayedStream クラスをネットワーク向けに修正（遅延しながらデータを返す） | ✅ |
+| 86 | DelayedHttpContent クラスを実装（カスタム HttpContent） | ✅ |
+| 87 | カスタムストリームを使用したテスト（DownloadFileAsync_WithCustomDelayedStream_ShouldNotReportFurtherReportsAfter100Percent） | ✅ |
+| 88 | 全テスト実行（成功：61成功、0失敗） | ✅ |
+| 89 | Tests/Mocks ディレクトリに DelayedStream.cs を作成（共有用） | ✅ |
+| 90 | Tests/Mocks ディレクトリに DelayedHttpContent.cs を作成（共有用） | ✅ |
+| 91 | FileDownloaderTests.cs を修正（Mocks クラスを使用） | ✅ |
+| 92 | FileDownloaderIntegrationTests.cs にモックテストを追加 | ✅ |
+| 93 | 全テスト実行（成功：63成功、0失敗） | ✅ |
+| 94 | DownloadFileWithMock_WithProgress_ReportsAt1000msIntervals に総報告数のアサーションを追加 | ✅ |
 
 ---
 

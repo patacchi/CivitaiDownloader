@@ -23,6 +23,10 @@
 4. **IFileSystem** - ファイルシステム操作の抽象化
 5. **DefaultFileSystem** - IFileSystem の実装
 
+### テスト用クラス
+6. **DelayedStream** - ネットワーク遅延をシミュレートするカスタムストリーム（テスト用）
+7. **DelayedHttpContent** - DelayedStream を返すカスタム HttpContent（テスト用）
+
 ### デザインパターン
 - **Strategy パターン**: IFileSystem と DefaultFileSystem
 - **Dependency Injection**: FileDownloader に HttpClient と IFileSystem を渡す
@@ -61,6 +65,8 @@ sequenceDiagram
 | FileDownloader | ファイルダウンロードの主要ロジック |
 | IFileSystem | ファイルシステム操作の抽象化 |
 | DefaultFileSystem | IFileSystem の実装 |
+| DelayedStream | ネットワーク遅延をシミュレートするカスタムストリーム（テスト用） |
+| DelayedHttpContent | DelayedStream を返すカスタム HttpContent（テスト用） |
 
 ## テスト戦略
 
