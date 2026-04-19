@@ -39,7 +39,7 @@ sequenceDiagram
             
             FD->>FD: Check if Y
             alt Y でない場合
-                FD-->>Program: null (キャンセル)
+                FD-->>Program: DownloadResult {FilePath=null, Status=Cancelled}
             end
         end
     end
@@ -56,7 +56,8 @@ sequenceDiagram
         end
     end
     
-    FD-->>Program: outputPath (成功時)
+    FD-->>Program: DownloadResult {FilePath=successPath, Status=Success}
+    Note right of FD: キャンセル: FilePath=null, Status=Cancelled<br/>失敗: FilePath=null, Status=Failed, ErrorMessage=...
 ```
 
 ## クラス間のデータフロー
