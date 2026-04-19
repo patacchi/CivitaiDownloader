@@ -11,7 +11,7 @@ class Program
     /// アプリケーションのエントリーポイント。
     /// コマンドライン引数を解析し、指定された URL からファイルをダウンロードします。
     /// </summary>
-    /// <param name="args">コマンドライン引数（-url, -output, -filename）</param>
+    /// <param name="args">コマンドライン引数（--url, --output, --filename）</param>
     static async Task Main(string[] args)
     {
         // コマンドライン引数の解析
@@ -88,14 +88,14 @@ class Program
         Console.WriteLine();
         Console.WriteLine("使用方法:");
         Console.WriteLine("  CivitaiDownloader.exe <URL> [オプション]");
-        Console.WriteLine("  CivitaiDownloader.exe -url <URL> [オプション]");
+        Console.WriteLine("  CivitaiDownloader.exe --url <URL> [オプション]");
         Console.WriteLine();
         Console.WriteLine("引数:");
-        Console.WriteLine("  <URL>                   ダウンロードするURL（位置パラメータ、または -url オプション）");
+        Console.WriteLine("  <URL>                   ダウンロードするURL（位置パラメータ、または --url オプション）");
         Console.WriteLine("  --url <URL>             ダウンロードするURL（オプション）");
-        Console.WriteLine("  -output <ディレクトリ>  出力ディレクトリ（オプション、デフォルト: カレントディレクトリ）");
-        Console.WriteLine("  -filename <ファイル名>  ファイル名（オプション、指定なしはサーバーから取得）");
-        Console.WriteLine("  -token <トークン>       アクセストークン（オプション、または環境変数 CIVITAI_API_KEY）");
+        Console.WriteLine("  --output <ディレクトリ>  出力ディレクトリ（オプション、デフォルト: カレントディレクトリ）");
+        Console.WriteLine("  --filename <ファイル名>  ファイル名（オプション、指定なしはサーバーから取得）");
+        Console.WriteLine("  --token <トークン>       アクセストークン（オプション、または環境変数 CIVITAI_API_KEY）");
         Console.WriteLine("  -y                      既存ファイルを自動的に上書き（確認なし）");
         Console.WriteLine("  -h, --help              使用方法を表示");
         Console.WriteLine();

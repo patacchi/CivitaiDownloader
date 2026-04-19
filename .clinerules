@@ -47,3 +47,21 @@ docs/
 - 機能追加ごとにコミット
 - テストの追加は機能実装と同時にコミット
 - ドキュメント更新は別途コミット
+
+---
+
+## 進捗管理
+
+### ルール:
+1. 新タスク発生時に、必ず docs/PROJECT_PROGRESS.md に追加する
+2. タスク完了時に、必ず docs/PROJECT_PROGRESS.md に完了ステータス（✅）を更新する
+3. ドキュメント更新（README, MEMORY_BANK, ARCHITECTURE, PROJECT_PROGRESS）は、機能実装完了時に更新する
+
+#### 実装例:
+- 新しいオプションを追加する場合 → テストを先に実装 → 実装 → PROJECT_PROGRESS.md に追加 → README/MEMORY_BANK/ARCHITECTURE を更新
+- バグ修正の場合 → 対応するテストを追加 → 修正 → PROJECT_PROGRESS.md に追加
+
+#### 進捗管理の更新タイミング:
+- 新機能実装開始時: 未実装タスクリストに追加
+- 実装完了時: 実装完了タスクリストに追加
+- ドキュメント更新時: 関連ドキュメントを更新

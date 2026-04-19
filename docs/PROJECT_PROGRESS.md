@@ -105,8 +105,15 @@
 | 75 | docs/MEMORY_BANK.md の作成 | ✅ |
 | 76 | docs/PROJECT_PROGRESS.md の作成 | ✅ |
 | 77 | .clinerules ファイルの作成 | ✅ |
+| 78 | 引数の二重ダッシュプレフィックス変更（--url, --output, --filename, --token） | ✅ |
+| 79 | 出力ディレクトリのパス解決機能（相対パス、ネスト、絶対パス）を実装 | ✅ |
+| 80 | TDD（テスト駆動開発）の実践 - テストを先に実装 | ✅ |
+| 81 | ユニークなディレクトリ名生成と既存ディレクトリ保護機能を追加 | ✅ |
+| 82 | 統合テストにディレクトリ作成テストを追加 | ✅ |
+| 83 | ドキュメントの更新（README, MEMORY_BANK, ARCHITECTURE） | ✅ |
 
 ---
+
 
 ## 次に実行すべきタスク（未実装機能）
 
@@ -139,20 +146,20 @@ dotnet test CivitaiDownloader.sln
 # URL を位置パラメータで指定
 CivitaiDownloader.exe "https://civitai.com/api/download/models/123"
 
-# URL を -url オプションで指定
-CivitaiDownloader.exe -url "https://civitai.com/api/download/models/123"
+# URL を --url オプションで指定
+CivitaiDownloader.exe --url "https://civitai.com/api/download/models/123"
 
 # 出力ディレクトリを指定
-CivitaiDownloader.exe "https://civitai.com/api/download/models/123" -output "./downloads"
+CivitaiDownloader.exe "https://civitai.com/api/download/models/123" --output "./downloads"
 
 # カスタムファイル名を指定
-CivitaiDownloader.exe -url "https://civitai.com/api/download/models/123" -filename "custom.zip"
+CivitaiDownloader.exe --url "https://civitai.com/api/download/models/123" --filename "custom.zip"
 
 # Token を指定
-CivitaiDownloader.exe -url "https://civitai.com/api/download/models/123" -token "your_token"
+CivitaiDownloader.exe --url "https://civitai.com/api/download/models/123" --token "your_token"
 
 # 自動上書きモード
-CivitaiDownloader.exe -url "https://civitai.com/api/download/models/123" -y
+CivitaiDownloader.exe --url "https://civitai.com/api/download/models/123" -y
 ```
 
 ---

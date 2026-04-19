@@ -90,7 +90,7 @@ graph TD
 ### CommandLineArgs
 - **役割**: コマンドライン引数の解析と保持
 - **主な処理**:
-  1. `-url`, `-output`, `-filename`, `-y`, `-token`, `-h`, `--help` を解析
+   1. `--url`, `--output`, `--filename`, `-y`, `--token`, `-h`, `--help` を解析
   2. 環境変数 `CIVITAI_API_KEY` から token を取得
   3. 位置パラメータ（URL）を解析
 
