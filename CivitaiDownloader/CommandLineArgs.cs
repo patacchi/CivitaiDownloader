@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 /// <summary>
 /// コマンドライン引数を解析して保持するクラス。
@@ -54,19 +55,19 @@ public class CommandLineArgs
         {
             switch (args[i].ToLowerInvariant())
             {
-                case "-url":
+                case "--url":
                     if (i + 1 < args.Length)
                     {
                         url = args[++i];
                     }
                     break;
-                case "-output":
+                case "--output":
                     if (i + 1 < args.Length)
                     {
                         outputDirectory = args[++i];
                     }
                     break;
-                case "-filename":
+                case "--filename":
                     if (i + 1 < args.Length)
                     {
                         filename = args[++i];
@@ -75,7 +76,7 @@ public class CommandLineArgs
                 case "-y":
                     autoOverwrite = true;
                     break;
-                case "-token":
+                case "--token":
                     if (i + 1 < args.Length)
                     {
                         token = args[++i];
@@ -88,7 +89,7 @@ public class CommandLineArgs
             }
         }
 
-        // -url オプションが指定されていない場合、最初の位置パラメータを URL として使用
+        // --url オプションが指定されていない場合、最初の位置パラメータを URL として使用
         if (string.IsNullOrEmpty(url))
         {
             // URL 形式の位置パラメータを検索（http:// または https:// で始まる）
@@ -124,10 +125,29 @@ public class CommandLineArgs
     private CommandLineArgs(string url, string outputDirectory, string filename, string token, bool showHelp, bool autoOverwrite = false)
     {
         Url = url;
-        OutputDirectory = outputDirectory;
+        OutputDirectory = ResolveOutputDirectory(outputDirectory);
         Filename = filename;
         Token = token;
         ShowHelp = showHelp;
         AutoOverwrite = autoOverwrite;
+    }
+
+    /// <summary>
+    /// 出力ディレクトリパスを解決します。
+    /// 相対パスの場合はカレントディレクトリからの絶対パスに変換します。
+    /// ただし、ルートから始まる絶対パスはそのまま使用します。
+    /// </summary>
+    /// <param name="outputDirectory">出力ディレクトリのパス。</param>
+    /// <returns>解決された出力ディレクトリのパス。</returns>
+    private static string ResolveOutputDirectory(string outputDirectory)
+    {
+        // パスがルートから始まるか確認（Unix: /, Windows: C:\ など）
+        if (Path.IsPathRooted(outputDirectory))
+        {
+            return outputDirectory;
+        }
+
+        // 相対パスの場合はカレントディレクトリからの絶対パスに変換
+        return Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, outputDirectory));
     }
 }

@@ -16,6 +16,11 @@ public class FileDownloaderIntegrationTests : IDisposable
     private readonly string _tempDirectory;
 
     /// <summary>
+    /// テストで作成したディレクトリのリスト（テスト後に削除用）。
+    /// </summary>
+    private readonly System.Collections.Generic.List<string> _directoriesToCleanUp;
+
+    /// <summary>
     /// FileDownloaderIntegrationTests クラスの新しいインスタンスを初期化します。
     /// 一時ディレクトリを作成します。
     /// </summary>
@@ -23,13 +28,32 @@ public class FileDownloaderIntegrationTests : IDisposable
     {
         _tempDirectory = Path.Combine(Path.GetTempPath(), $"Civitai_Integration_{Path.GetRandomFileName()}");
         Directory.CreateDirectory(_tempDirectory);
+        _directoriesToCleanUp = new System.Collections.Generic.List<string>();
     }
 
     /// <summary>
     /// テスト終了時に一時ディレクトリとその中のすべてのファイルを削除します。
+    /// また、テストで作成したディレクトリも削除します。
     /// </summary>
     public void Dispose()
     {
+        // テストで作成したディレクトリを削除
+        foreach (string dir in _directoriesToCleanUp)
+        {
+            if (Directory.Exists(dir))
+            {
+                try
+                {
+                    Directory.Delete(dir, true);
+                }
+                catch
+                {
+                    // 削除に失敗した場合は無視
+                }
+            }
+        }
+
+        // 一時ディレクトリを削除
         if (Directory.Exists(_tempDirectory))
         {
             try
@@ -41,7 +65,42 @@ public class FileDownloaderIntegrationTests : IDisposable
                 // 削除に失敗した場合は無視
             }
         }
+
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// テスト用にユニークなディレクトリ名を生成します。
+    /// 既に存在する場合は再試行します。
+    /// </summary>
+    /// <param name="name">ベース名。</param>
+    /// <returns>ユニークなディレクトリパス。</returns>
+    private string GenerateUniqueDirectory(string name)
+    {
+        string basePath = Path.Combine(_tempDirectory, name);
+        string uniquePath = basePath;
+        int counter = 1;
+
+        while (Directory.Exists(uniquePath))
+        {
+            uniquePath = $"{basePath}_{counter}";
+            counter++;
+        }
+
+        return uniquePath;
+    }
+
+    /// <summary>
+    /// テストで作成したディレクトリをクリーンアップ用リストに追加します。
+    /// </summary>
+    /// <param name="directoryPath">ディレクトリパス。</param>
+    private void AddDirectoryToCleanup(string directoryPath)
+    {
+        // 既に存在するディレクトリはクリーンアップ対象外
+        if (!Directory.Exists(directoryPath))
+        {
+            _directoriesToCleanUp.Add(directoryPath);
+        }
     }
 
     /// <summary>
@@ -192,5 +251,106 @@ public class FileDownloaderIntegrationTests : IDisposable
         // 最終報告が100%であることを確認
         var finalReport = reportedProgress[reportedProgress.Count - 1];
         Assert.Equal(1.0, finalReport.progress, 2);
+    }
+
+    /// <summary>
+    /// Directory.CreateDirectory にネストされたパスを指定した場合、すべてのディレクトリが作成されることをテストします。
+    /// 例: nest1/nest2/target
+    /// </summary>
+    [Fact]
+    public void Directory_CreateDirectory_WithNestedPath_CreatesAllDirectories()
+    {
+        // Arrange
+        string uniqueName = $"Nested_{Guid.NewGuid():N}";
+        string nestedPath = Path.Combine(_tempDirectory, uniqueName, "nest1", "nest2", "target");
+
+        // Act
+        Directory.CreateDirectory(nestedPath);
+
+        // Assert
+        Assert.True(Directory.Exists(nestedPath));
+        Assert.True(Directory.Exists(Path.Combine(_tempDirectory, uniqueName, "nest1")));
+        Assert.True(Directory.Exists(Path.Combine(_tempDirectory, uniqueName, "nest1", "nest2")));
+        Assert.True(Directory.Exists(Path.Combine(_tempDirectory, uniqueName, "nest1", "nest2", "target")));
+    }
+
+    /// <summary>
+    /// Directory.CreateDirectory に . で始まる相対パスを指定した場合、ディレクトリが作成されることをテストします。
+    /// 例: ./target
+    /// </summary>
+    [Fact]
+    public void Directory_CreateDirectory_WithDotPrefixPath_CreatesDirectory()
+    {
+        // Arrange
+        string uniqueName = $"DotPrefix_{Guid.NewGuid():N}";
+        string dotPrefixPath = Path.Combine(_tempDirectory, "./" + uniqueName);
+
+        // Act
+        Directory.CreateDirectory(dotPrefixPath);
+
+        // Assert
+        Assert.True(Directory.Exists(dotPrefixPath));
+    }
+
+    /// <summary>
+    /// Directory.CreateDirectory に . で始まらない相対パスを指定した場合、ディレクトリが作成されることをテストします。
+    /// 例: directtarget/nest1
+    /// </summary>
+    [Fact]
+    public void Directory_CreateDirectory_WithNoPrefixPath_CreatesDirectory()
+    {
+        // Arrange
+        string uniqueName = $"NoPrefix_{Guid.NewGuid():N}";
+        string noPrefixPath = Path.Combine(_tempDirectory, uniqueName, "nest1");
+
+        // Act
+        Directory.CreateDirectory(noPrefixPath);
+
+        // Assert
+        Assert.True(Directory.Exists(noPrefixPath));
+    }
+
+    /// <summary>
+    /// Directory.CreateDirectory に / で始まる絶対パスを指定した場合、ディレクトリが作成されることをテストします。
+    /// 例: /home/user/target (Unix) または C:\temp\target (Windows)
+    /// </summary>
+    [Fact]
+    public void Directory_CreateDirectory_WithAbsolutePath_CreatesDirectory()
+    {
+        // Arrange
+        // Unix 形式の絶対パス（/home/user/target）
+        string uniqueName = $"AbsolutePath_{Guid.NewGuid():N}";
+        string absolutePath = Path.Combine("/", "home", "user", uniqueName);
+
+        // Act
+        Directory.CreateDirectory(absolutePath);
+
+        // Assert
+        // Path.IsPathRooted でルート判定されるため、絶対パスとして処理される
+        Assert.True(Directory.Exists(absolutePath));
+    }
+
+    /// <summary>
+    /// 既存のディレクトリに同じ名前でテストを実行した場合、既存のディレクトリが残ることをテストします。
+    /// </summary>
+    [Fact]
+    public void Directory_CreateDirectory_WithExistingDirectory_PreservesExisting()
+    {
+        // Arrange
+        string existingDirName = $"Existing_{Guid.NewGuid():N}";
+        string existingDirPath = Path.Combine(_tempDirectory, existingDirName);
+        
+        // 既存ディレクトリを作成
+        Directory.CreateDirectory(existingDirPath);
+        string existingFilePath = Path.Combine(existingDirPath, "existing_file.txt");
+        File.WriteAllText(existingFilePath, "This is an existing file.");
+
+        // Act
+        Directory.CreateDirectory(existingDirPath);
+
+        // Assert
+        // 既存のディレクトリとファイルが残っていることを確認
+        Assert.True(Directory.Exists(existingDirPath));
+        Assert.True(File.Exists(existingFilePath));
     }
 }

@@ -17,18 +17,18 @@ Civitai から AI モデルをダウンロードするための CLI ツールで
 ### 基本的な使用方法
 
 ```bash
-dotnet CivitaiDownloader.dll -url "<ダウンロードURL>"
+dotnet CivitaiDownloader.dll --url "<ダウンロードURL>"
 ```
 
 ### オプション
 
 | オプション | 説明 |
 |-----------|------|
-| `<URL>` | ダウンロードする URL（位置パラメータ、または `-url` オプション） |
-| `-url <URL>` | ダウンロードする URL（オプション） |
-| `-output <ディレクトリ>` | 出力ディレクトリ（デフォルト: カレントディレクトリ） |
-| `-filename <ファイル名>` | ファイル名（指定なしはサーバーから取得） |
-| `-token <トークン>` | アクセストークン（環境変数 `CIVITAI_API_KEY` も使用可能） |
+| `<URL>` | ダウンロードする URL（位置パラメータ、または `--url` オプション） |
+| `--url <URL>` | ダウンロードする URL（オプション） |
+| `--output <ディレクトリ>` | 出力ディレクトリ（デフォルト: カレントディレクトリ） |
+| `--filename <ファイル名>` | ファイル名（指定なしはサーバーから取得） |
+| `--token <トークン>` | アクセストークン（環境変数 `CIVITAI_API_KEY` も使用可能） |
 | `-y` | 既存ファイルを自動的に上書き（確認なし） |
 | `-h, --help` | 使用方法を表示 |
 
@@ -36,13 +36,13 @@ dotnet CivitaiDownloader.dll -url "<ダウンロードURL>"
 
 ```bash
 # 基本的なダウンロード
-dotnet CivitaiDownloader.dll -url "https://civitai.com/api/download/models/123"
+dotnet CivitaiDownloader.dll --url "https://civitai.com/api/download/models/123"
 
 # 出力ディレクトリを指定
-dotnet CivitaiDownloader.dll -url "https://civitai.com/api/download/models/123" -output "./downloads"
+dotnet CivitaiDownloader.dll --url "https://civitai.com/api/download/models/123" --output "./downloads"
 
 # ファイル名を指定
-dotnet CivitaiDownloader.dll -url "https://civitai.com/api/download/models/123" -filename "custom.zip"
+dotnet CivitaiDownloader.dll --url "https://civitai.com/api/download/models/123" --filename "custom.zip"
 ```
 
 ## ビルド方法
@@ -69,7 +69,7 @@ dotnet build
 sudo apt update && sudo apt install -y dotnet-runtime-10.0
 
 # 実行
-dotnet CivitaiDownloader.dll -url "https://civitai.com/api/download/models/123"
+dotnet CivitaiDownloader.dll --url "https://civitai.com/api/download/models/123"
 ```
 
 ## テスト
@@ -88,4 +88,3 @@ dotnet test CivitaiDownloader.sln
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | アーキテクチャとクラスの責務マップ |
 | [MEMORY_BANK.md](docs/MEMORY_BANK.md) | メモリーバンク（プロジェクト要約） |
 | [PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) | プロジェクト進捗管理 |
-
