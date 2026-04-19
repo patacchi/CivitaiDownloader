@@ -61,7 +61,7 @@ class Program
 
         // ダウンロードの実行
         using var downloader = new FileDownloader();
-        string downloadedFilePath = await downloader.DownloadFileAsync(
+        var downloadResult = await downloader.DownloadFileAsync(
             downloadUrl,
             commandLineArgs.OutputDirectory,
             commandLineArgs.Filename,
@@ -69,13 +69,26 @@ class Program
             progress);
 
         Console.WriteLine(); // 進捗表示の行を改行
-        if (!string.IsNullOrEmpty(downloadedFilePath))
+        if (downloadResult.FilePath != null)
         {
-            Console.WriteLine($"ダウンロードが完了しました: {downloadedFilePath}");
+            Console.WriteLine($"ダウンロードが完了しました: {downloadResult.FilePath}");
         }
         else
         {
-            Console.Error.WriteLine("ダウンロードに失敗しました。");
+            // 終了原因に応じてメッセージを変更
+            switch (downloadResult.Status)
+            {
+                case FileDownloader.DownloadStatus.Cancelled:
+                    Console.WriteLine("ダウンロードをキャンセルしました。");
+                    break;
+                case FileDownloader.DownloadStatus.Failed:
+                    Console.Error.WriteLine($"エラー: ダウンロードに失敗しました。");
+                    if (!string.IsNullOrEmpty(downloadResult.ErrorMessage))
+                    {
+                        Console.Error.WriteLine($"詳細: {downloadResult.ErrorMessage}");
+                    }
+                    break;
+            }
         }
     }
 

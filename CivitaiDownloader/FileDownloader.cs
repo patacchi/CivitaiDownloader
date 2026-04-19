@@ -44,6 +44,48 @@ public class FileDownloader : IDisposable
     }
 
     /// <summary>
+    /// ダウンロードの結果を表すクラス。
+    /// </summary>
+    public class DownloadResult
+    {
+        /// <summary>
+        /// ダウンロードに成功したファイルの絶対パス。失敗した場合は null。
+        /// </summary>
+        public string FilePath { get; init; }
+        
+        /// <summary>
+        /// 終了原因。
+        /// </summary>
+        public DownloadStatus Status { get; init; }
+        
+        /// <summary>
+        /// エラーメッセージ。失敗した場合は null 以外。
+        /// </summary>
+        public string ErrorMessage { get; init; }
+    }
+    
+    /// <summary>
+    /// ダウンロードの終了状態を表す列挙型。
+    /// </summary>
+    public enum DownloadStatus
+    {
+        /// <summary>
+        /// ダウンロードに成功しました。
+        /// </summary>
+        Success,
+        
+        /// <summary>
+        /// ユーザーによるキャンセル。
+        /// </summary>
+        Cancelled,
+        
+        /// <summary>
+        /// エラーで失敗しました。
+        /// </summary>
+        Failed
+    }
+
+    /// <summary>
     /// 指定された URL からファイルをダウンロードし、Content-Disposition ヘッダから抽出したファイル名で保存します。
     /// </summary>
     /// <param name="url">ダウンロードするファイルの URL。</param>
@@ -51,8 +93,8 @@ public class FileDownloader : IDisposable
     /// <param name="customFilename">オプション。使用するファイル名を明示的に指定します。指定しない場合はサーバーから取得します。</param>
     /// <param name="overwrite">既存ファイルを上書きする場合は true。省略時は false。</param>
     /// <param name="progress">進捗を報告する IProgress オブジェクト（省略時は非同期で進捗を報告しない）。</param>
-    /// <returns>ダウンロードされたファイルの絶対パス。失敗した場合は null。</returns>
-    public async Task<string> DownloadFileAsync(string url, string outputDirectory, string customFilename = null, bool overwrite = false, IProgress<(double progress, long downloaded, long total)> progress = null)
+    /// <returns>ダウンロード結果を含む DownloadResult オブジェクト。失敗した場合は FilePath が null、Status が Failed。</returns>
+    public async Task<DownloadResult> DownloadFileAsync(string url, string outputDirectory, string customFilename = null, bool overwrite = false, IProgress<(double progress, long downloaded, long total)> progress = null)
     {
         try
         {
@@ -83,7 +125,7 @@ public class FileDownloader : IDisposable
             // ファイル名がまだ取得できない場合はエラー
             if (string.IsNullOrEmpty(downloadedFilename))
             {
-                return null;
+                return new DownloadResult { FilePath = null, Status = DownloadStatus.Failed, ErrorMessage = "ファイル名を取得できません。" };
             }
 
             // 出力ファイルパス
@@ -108,8 +150,7 @@ public class FileDownloader : IDisposable
                 
                 if (keyInfo != ConsoleKey.Y)
                 {
-                    Console.WriteLine("ダウンロードをキャンセルしました。");
-                    return null;
+                    return new DownloadResult { FilePath = null, Status = DownloadStatus.Cancelled, ErrorMessage = null };
                 }
             }
 
@@ -160,13 +201,13 @@ public class FileDownloader : IDisposable
                 }
             }
 
-            return outputPath;
+            return new DownloadResult { FilePath = outputPath, Status = DownloadStatus.Success, ErrorMessage = null };
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"エラー: ファイルのダウンロードに失敗しました。URL: {url}");
             Console.Error.WriteLine($"詳細: {ex.Message}");
-            return null;
+            return new DownloadResult { FilePath = null, Status = DownloadStatus.Failed, ErrorMessage = ex.Message };
         }
     }
 

@@ -130,12 +130,12 @@ public class FileDownloaderIntegrationTests : IDisposable
 
         // Act - FileDownloader を使用してファイルをダウンロード
         var downloader = new FileDownloader();
-        string downloadedFilePath = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory);
+        var downloadResult = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory);
 
         // Assert - ダウンロードされたファイルが存在することを確認
-        Assert.NotNull(downloadedFilePath);
-        Assert.True(File.Exists(downloadedFilePath));
-        Assert.Equal(expectedFilename, Path.GetFileName(downloadedFilePath));
+        Assert.NotNull(downloadResult.FilePath);
+        Assert.True(File.Exists(downloadResult.FilePath));
+        Assert.Equal(expectedFilename, Path.GetFileName(downloadResult.FilePath));
     }
 
     /// <summary>
@@ -153,10 +153,11 @@ public class FileDownloaderIntegrationTests : IDisposable
         var downloader = new FileDownloader();
 
         // Act
-        string result = await downloader.DownloadFileAsync(invalidUrl, _tempDirectory);
+        var result = await downloader.DownloadFileAsync(invalidUrl, _tempDirectory);
 
         // Assert - 無効な URL の場合は null を返す
-        Assert.Null(result);
+        Assert.Null(result.FilePath);
+        Assert.Equal(FileDownloader.DownloadStatus.Failed, result.Status);
     }
 
     /// <summary>
@@ -187,11 +188,11 @@ public class FileDownloaderIntegrationTests : IDisposable
             reportedProgress.Add((report.progress, report.downloaded, report.total, DateTime.Now));
         });
 
-        string downloadedFilePath = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory, progress: progress);
+        var downloadResult = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory, progress: progress);
 
         // Assert
-        Assert.NotNull(downloadedFilePath);
-        Assert.True(File.Exists(downloadedFilePath));
+        Assert.NotNull(downloadResult.FilePath);
+        Assert.True(File.Exists(downloadResult.FilePath));
 
         // 進捗報告が行われたことを確認
         Assert.True(reportedProgress.Count > 0, "進捗が報告されませんでした");
@@ -246,11 +247,11 @@ public class FileDownloaderIntegrationTests : IDisposable
             reportedProgress.Add(report);
         });
 
-        string downloadedFilePath = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory, progress: progress);
+        var downloadResult = await downloader.DownloadFileAsync(downloadUrl, _tempDirectory, progress: progress);
 
         // Assert
-        Assert.NotNull(downloadedFilePath);
-        Assert.True(File.Exists(downloadedFilePath));
+        Assert.NotNull(downloadResult.FilePath);
+        Assert.True(File.Exists(downloadResult.FilePath));
 
         // 最終報告が100%であることを確認
         var finalReport = reportedProgress[reportedProgress.Count - 1];
@@ -393,7 +394,7 @@ public class FileDownloaderIntegrationTests : IDisposable
         // Act
         string tempDir = Path.GetTempPath();
         string tempFileName = $"test_{Guid.NewGuid()}.zip";
-        string result = await downloader.DownloadFileAsync(
+        var result = await downloader.DownloadFileAsync(
             "https://example.com/test.zip",
             tempDir,
             customFilename: tempFileName,
@@ -401,7 +402,7 @@ public class FileDownloaderIntegrationTests : IDisposable
         );
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(result.FilePath);
         Assert.True(reportedProgress.Count > 0, $"進捗が1回も報告されていません (報告回数: {reportedProgress.Count})");
         
         // 最後の報告が100%であることを確認
@@ -466,7 +467,7 @@ public class FileDownloaderIntegrationTests : IDisposable
         // Act
         string tempDir = Path.GetTempPath();
         string tempFileName = $"test_{Guid.NewGuid()}.zip";
-        string result = await downloader.DownloadFileAsync(
+        var result = await downloader.DownloadFileAsync(
             "https://example.com/test.zip",
             tempDir,
             customFilename: tempFileName,
@@ -477,7 +478,7 @@ public class FileDownloaderIntegrationTests : IDisposable
         );
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(result.FilePath);
         
         // 進捗報告が行われたことを確認
         Assert.True(reportedProgress.Count > 0, "進捗が報告されませんでした");
